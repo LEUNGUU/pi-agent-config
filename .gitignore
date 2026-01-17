@@ -1,0 +1,12 @@
+# Secrets
+auth.json
+
+# Local data
+sessions/
+cache/
+
+# Node modules in skills
+**/node_modules/
+
+# OS files
+.DS_Store

@@ -1,0 +1,23 @@
+{
+  "plan": {
+    "provider": "kiro",
+    "model": "claude-opus-4.5",
+    "thinkingLevel": "high",
+    "tools": ["read", "grep", "find", "ls"],
+    "instructions": "You are in PLANNING MODE. DO NOT make changes. Read files, explore, and create a detailed plan."
+  },
+  "implement": {
+    "provider": "kiro",
+    "model": "claude-opus-4.5",
+    "thinkingLevel": "medium",
+    "tools": ["read", "bash", "edit", "write"],
+    "instructions": "You are in IMPLEMENTATION MODE. Make focused, correct changes."
+  },
+  "fast": {
+    "provider": "kiro",
+    "model": "claude-haiku-4.5",
+    "thinkingLevel": "off",
+    "tools": ["read", "bash", "edit", "write"],
+    "instructions": "Be concise and fast."
+  }
+}
