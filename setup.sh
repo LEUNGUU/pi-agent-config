@@ -6,6 +6,9 @@ REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 mkdir -p "$PI_DIR"
 
+# Initialize and update submodules
+git -C "$REPO_DIR" submodule update --init --recursive
+
 # Symlink config files
 for f in settings.json models.json presets.json AGENTS.md; do
     [ -f "$REPO_DIR/$f" ] && ln -sf "$REPO_DIR/$f" "$PI_DIR/$f"
