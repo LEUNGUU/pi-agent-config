@@ -1,7 +1,7 @@
 {
   "plan": {
     "provider": "kiro",
-    "model": "claude-opus-4.5",
+    "model": "claude-opus-4.6",
     "thinkingLevel": "high",
     "tools": ["read", "grep", "find", "ls"],
     "instructions": "You are in PLANNING MODE. DO NOT make changes. Read files, explore, and create a detailed plan."

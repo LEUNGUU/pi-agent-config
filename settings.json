@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.48.0",
-  "defaultThinkingLevel": "high",
+  "lastChangelogVersion": "0.54.2",
+  "defaultThinkingLevel": "medium",
   "defaultProvider": "kiro",
-  "defaultModel": "claude-opus-4.5",
+  "defaultModel": "claude-opus-4.6",
   "theme": "catppuccin-mocha"
 }

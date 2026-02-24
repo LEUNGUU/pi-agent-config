@@ -1,0 +1,16 @@
+{
+  "name": "pi-agent-config",
+  "version": "1.0.0",
+  "description": "Personal pi coding agent configuration package",
+  "keywords": ["pi-package"],
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./extensions"],
+    "skills": ["./skills"],
+    "prompts": ["./prompts"],
+    "themes": ["./themes"]
+  },
+  "scripts": {
+    "postinstall": "cd skills/brave-search && npm install && cd ../browser-tools && npm install && cd ../youtube-transcript && npm install"
+  }
+}

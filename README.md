@@ -1,18 +1,30 @@
 # Pi Coding Agent Config
 
-Personal configuration for [pi-coding-agent](https://github.com/badlogic/pi-mono).
+Personal configuration and pi package for [pi-coding-agent](https://github.com/badlogic/pi-mono).
 
-## Setup
+## Install as Pi Package
 
 ```bash
-git clone --recursive <this-repo-url> ~/pi-agent-config
+pi install git:git@github.com:LEUNGUU/pi-agent-config
+```
+
+This loads extensions, skills, prompts, and themes automatically.
+
+## Full Personal Setup
+
+```bash
+git clone git@github.com:LEUNGUU/pi-agent-config.git ~/pi-agent-config
 cd ~/pi-agent-config
 ./setup.sh
 ```
 
+This symlinks config files to `~/.pi/agent/` and installs the repo as a local pi package.
+
 ## Structure
 
 ```
+├── package.json       # Pi package manifest
+├── setup.sh           # Personal config setup script
 ├── AGENTS.md          # Global context/guidelines
 ├── settings.json      # Pi settings
 ├── models.json        # Custom model providers
@@ -20,20 +32,14 @@ cd ~/pi-agent-config
 ├── extensions/        # Custom extensions
 ├── prompts/           # Prompt templates
 ├── themes/            # Custom themes
-└── skills/            # Skills (submodule)
+└── skills/            # Skills
 ```
 
 ## Post-Setup
 
-1. Create `~/.pi/agent/auth.json` with your API keys:
-   ```json
-   {
-     "anthropic": { "type": "api_key", "key": "sk-ant-..." }
-   }
-   ```
-
-2. Install skill dependencies:
-   ```bash
-   cd ~/.pi/agent/skills/pi-skills/brave-search && npm install
-   cd ~/.pi/agent/skills/pi-skills/youtube-transcript && npm install
-   ```
+Create `~/.pi/agent/auth.json` with your API keys:
+```json
+{
+  "anthropic": { "type": "api_key", "key": "sk-ant-..." }
+}
+```

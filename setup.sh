@@ -1,22 +1,25 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
 PI_DIR="$HOME/.pi/agent"
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 mkdir -p "$PI_DIR"
 
-# Initialize and update submodules
-git -C "$REPO_DIR" submodule update --init --recursive
-
-# Symlink config files
+# Symlink config files that pi packages don't handle
 for f in settings.json models.json presets.json AGENTS.md; do
-    [ -f "$REPO_DIR/$f" ] && ln -sf "$REPO_DIR/$f" "$PI_DIR/$f"
+    if [[ -f "$REPO_DIR/$f" ]]; then
+        ln -sf "$REPO_DIR/$f" "$PI_DIR/$f"
+        echo "Linked $f"
+    fi
 done
 
-# Symlink directories
-for d in extensions prompts themes skills; do
-    [ -d "$REPO_DIR/$d" ] && ln -sfn "$REPO_DIR/$d" "$PI_DIR/$d"
-done
+# Install as pi package for extensions, skills, prompts, and themes
+if command -v pi >/dev/null 2>&1; then
+    pi install "$REPO_DIR"
+    echo "Installed as pi package"
+else
+    echo "Warning: pi not found. Install pi and run: pi install $REPO_DIR"
+fi
 
 echo "Done. Config linked to $PI_DIR"
