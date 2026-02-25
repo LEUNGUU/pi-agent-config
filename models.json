@@ -2,7 +2,7 @@
   "providers": {
     "kiro": {
       "baseUrl": "http://localhost:18888",
-      "apiKey": "dummy",
+      "apiKey": "your-api-key-here",
       "api": "anthropic-messages",
       "models": [
         {

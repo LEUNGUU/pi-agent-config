@@ -3,5 +3,8 @@
   "defaultThinkingLevel": "medium",
   "defaultProvider": "kiro",
   "defaultModel": "claude-opus-4.6",
-  "theme": "catppuccin-mocha"
+  "theme": "catppuccin-mocha",
+  "packages": [
+    "../../pi-agent-config"
+  ]
 }

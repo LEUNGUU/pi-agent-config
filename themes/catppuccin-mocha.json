@@ -81,6 +81,12 @@
 		"thinkingHigh": "mauve",
 		"thinkingXhigh": "pink",
 
-		"bashMode": "green"
+		"bashMode": "green",
+
+		"thinkingText": "overlay1",
+		"selectedBg": "surface1",
+		"customMessageBg": "surface0",
+		"customMessageText": "text",
+		"customMessageLabel": "mauve"
 	}
 }
