@@ -18,6 +18,10 @@ Requires a Brave Search API account with a free subscription. A credit card is r
    ```bash
    export BRAVE_API_KEY="your-api-key-here"
    ```
+5. (Optional) For proxy support, set the proxy env var:
+   ```bash
+   export HTTPS_PROXY="http://127.0.0.1:1082"
+   ```
 5. Install dependencies (run once):
    ```bash
    cd {baseDir}
