@@ -1,10 +1,11 @@
 {
-  "lastChangelogVersion": "0.54.2",
+  "lastChangelogVersion": "0.75.5",
   "defaultThinkingLevel": "medium",
   "defaultProvider": "kiro",
-  "defaultModel": "claude-opus-4.6",
+  "defaultModel": "claude-opus-4.8",
   "theme": "catppuccin-mocha",
   "packages": [
-    "../../pi-agent-config"
+    "npm:@tintinweb/pi-subagents",
+    "npm:@pi-lab/notify"
   ]
 }
