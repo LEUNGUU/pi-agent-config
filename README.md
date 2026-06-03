@@ -18,7 +18,7 @@ cd ~/pi-agent-config
 ./setup.sh
 ```
 
-This symlinks config files to `~/.pi/agent/` and installs the repo as a local pi package.
+This copies config files to `~/.pi/agent/` and installs the repo as a local pi package.
 
 ## Structure
 
@@ -28,12 +28,14 @@ This symlinks config files to `~/.pi/agent/` and installs the repo as a local pi
 ├── AGENTS.md          # Global context/guidelines
 ├── settings.json      # Pi settings
 ├── models.json        # Custom model providers
-├── presets.json       # Mode presets (plan/implement/fast)
+├── agents/            # Custom subagents (4 review critics)
 ├── extensions/        # Custom extensions
 ├── prompts/           # Prompt templates
 ├── themes/            # Custom themes
 └── skills/            # Skills
 ```
+
+> `skills/web-access/UPGRADING.md` documents how to sync that skill from upstream.
 
 ## Post-Setup
 

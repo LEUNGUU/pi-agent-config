@@ -1,6 +1,6 @@
 ---
 name: brave-search
-description: Web search and content extraction via Brave Search API. Use for searching documentation, facts, or any web content. Lightweight, no browser required.
+description: Web search and content extraction via Brave Search API. FALLBACK web search skill: use tavily-search by default, and use this when Tavily hits its monthly quota/credit/rate limit, or when the user specifically asks for Brave. Also use to search, look up, find, research, check, or query information on the web, fetch/extract content from a URL, find documentation, API references, latest news, current events, or verify facts. No browser needed. Only use web-access instead when interactive page manipulation, login state, or JavaScript execution is required.
 ---
 
 # Brave Search
