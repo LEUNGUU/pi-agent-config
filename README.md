@@ -45,3 +45,20 @@ Create `~/.pi/agent/auth.json` with your API keys:
   "anthropic": { "type": "api_key", "key": "sk-ant-..." }
 }
 ```
+
+## Web Skills Setup
+
+Search/fetch skills need a couple of extra steps:
+
+- **API keys** (export in your shell, e.g. `~/.env.zsh` sourced by `.zshrc`):
+  - `TAVILY_API_KEY` — default search/extract ([app.tavily.com](https://app.tavily.com), free 1,000/mo)
+  - `BRAVE_API_KEY` — search fallback when Tavily quota is hit
+- **Tavily CLI**: `uv tool install tavily-cli` (provides the `tvly` command)
+- **web-access (browser/CDP)**: on-demand, not persistent. Chrome 136+ refuses
+  remote debugging on the default profile, so use a copied profile:
+  ```bash
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    --remote-debugging-port=9222 --user-data-dir="$HOME/.cdp-chrome-profile" &
+  node skills/web-access/scripts/cdp-proxy.mjs &
+  ```
+  See `skills/web-access/UPGRADING.md` for details.
