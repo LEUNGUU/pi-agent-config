@@ -33,3 +33,14 @@ node skills/web-access/scripts/cdp-proxy.mjs &
 Chrome 136+ refuses remote debugging on the default profile, so the copied profile at `~/.cdp-chrome-profile` (which carries login state) is required. Static fetches (curl / Jina) do not need Chrome or the proxy.
 
 **Escalate, don't blindly retry**: search → extract → browser. If a layer fails, move up the chain rather than re-running the same call — a search miss may mean the target doesn't exist, not "try again."
+
+## Dynamic Workflows
+
+When a task is long-running, massively parallel, or adversarial, proactively consider the `dynamic-workflows` skill (orchestrates many fresh-context subagents; plan in code, judgment delegated). Watch for these signals and suggest the matching pattern before grinding through it in one context:
+
+- "do this for many items / steps" → fan-out-and-synthesize, or loop-until-done if the count is unknown
+- "I don't trust this result / verify this claim" → adversarial verification (or deep-research to verify each claim)
+- "give me options, pick the best" → generate-and-filter or tournament
+- "route by type first" → classify-and-act
+
+Don't over-apply: most ordinary coding tasks don't need it (it uses far more tokens). See `skills/dynamic-workflows/SKILL.md`.
