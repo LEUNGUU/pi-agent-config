@@ -44,3 +44,26 @@ When a task is long-running, massively parallel, or adversarial, proactively con
 - "route by type first" → classify-and-act
 
 Don't over-apply: most ordinary coding tasks don't need it (it uses far more tokens). See `skills/dynamic-workflows/SKILL.md`.
+
+## Work Logging
+
+Maintain a `WORKLOG.md` at the repo root. Append a structured entry **as each meaningful step completes** — not only at the end of a task. Write incrementally so progress survives context compaction; never rely on memory to reconstruct what was done.
+
+Decide per task whether logging is warranted:
+- **Log**: anything that changes code/config/files, or produces a decision, finding, or result worth revisiting later (implementation, refactor, debugging, research conclusions, design choices, infra changes).
+- **Skip**: one-off Q&A with no durable artifact — simple translations, quick fact lookups, trivial explanations.
+
+Append (never rewrite history) entries in this format:
+
+```markdown
+## YYYY-MM-DD HH:MM — <short task title>
+- **What**: one-line summary of the step/change
+- **Files**: paths touched (or "—" if none)
+- **Why**: the goal or decision behind it
+- **Verified**: how it was checked (tests/build/run), or "not verified" + reason
+- **Next**: open follow-ups, if any
+```
+
+Create `WORKLOG.md` with a top-level `# Work Log` heading if it doesn't exist. Keep entries newest-last (chronological append).
+
+At the start of a task, check whether `WORKLOG.md` exists at the repo root and skim its recent entries for relevant prior context before exploring.
