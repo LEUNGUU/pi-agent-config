@@ -18,8 +18,8 @@ This machine uses **uv** (`/usr/local/bin/uv`) for Python version management and
 
 Choosing the right skill for networked tasks:
 
-- **Search the web** (discover URLs / info from a query): use `tavily-search` by default. On a quota/credit/rate-limit error (e.g. 429), fall back to `brave-search`. Don't switch back and forth within one task.
-- **Read a known URL**: use `web-access` directly — do NOT spend Tavily/Brave credits on extraction. For a static page, `web-access` can fetch cheaply via `curl` / `r.jina.ai` (no browser needed); for JS-rendered, login-walled, or anti-scraping pages (小红书/微信/Twitter etc.) it uses the browser via CDP. Use `tavily-extract` only as a last-resort fetch fallback.
+- **Search the web** (discover URLs / info from a query): use `tavily-search` by default — the account has paid credits, so use it freely. On a rate-limit or network error (e.g. 429), fall back to `brave-search`. Don't switch back and forth within one task.
+- **Read a known URL**: prefer `web-access` for a static page — its `curl` / `r.jina.ai` fetch is faster and cheaper on tokens (no browser needed); for JS-rendered, login-walled, or anti-scraping pages (小红书/微信/Twitter etc.) it uses the browser via CDP. `tavily-extract` is a fine alternative when you want LLM-optimized markdown.
 - **Interactive / logged-in / JS-heavy** (click, fill, screenshot, scrape dynamic content, "the page I was just looking at"): use `web-access`.
 
 For any `web-access` task that needs the browser (CDP), the debug Chrome and CDP proxy are **on-demand, not persistent** — they don't survive a reboot or Chrome quit. Before such a task, run `skills/web-access/scripts/check-deps.mjs`; if Chrome isn't connected, start it with the copied debug profile, then the proxy:

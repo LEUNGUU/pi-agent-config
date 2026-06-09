@@ -4,6 +4,7 @@ auth.json
 # Local data
 sessions/
 cache/
+WORKLOG.md
 
 # Node modules in skills
 **/node_modules/
