@@ -34,6 +34,14 @@ Chrome 136+ refuses remote debugging on the default profile, so the copied profi
 
 **Escalate, don't blindly retry**: search → extract → browser. If a layer fails, move up the chain rather than re-running the same call — a search miss may mean the target doesn't exist, not "try again."
 
+## Interactive Terminals
+
+When a task needs to drive an *interactive* terminal program — a REPL, a TUI, a prompt-driven installer, or any long-running CLI that repaints and waits for keystrokes — use the `boo-terminal` skill instead of guessing with `sleep`/pipes. boo (`/usr/local/bin/boo`) is a local terminal multiplexer: it runs the program in a detached PTY session, so the process survives client disconnects, and you read the *rendered* screen deterministically via `peek --json` after `wait`. See `skills/boo-terminal/SKILL.md`.
+
+- **Use boo when**: starting an interactive program, sending it input and reading its screen back; the program needs a real TTY; or a long-running/remote interactive session must survive your terminal detaching (e.g. `boo new s -d -- ssh host`, then drive it).
+- **Don't use boo for**: simple non-interactive commands — run those directly with bash/ssh. 
+- The human uses tmux for their own interactive work; the agent uses boo (driven headlessly via `new -d` / `send` / `wait` / `peek --json` / `kill` — the prefix key never matters for automation).
+
 ## Dynamic Workflows
 
 When a task is long-running, massively parallel, or adversarial, proactively consider the `dynamic-workflows` skill (orchestrates many fresh-context subagents; plan in code, judgment delegated). Watch for these signals and suggest the matching pattern before grinding through it in one context:
