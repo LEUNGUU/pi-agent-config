@@ -80,3 +80,26 @@ On 4, the program is still running but slow — raise --timeout or use
 - Don't leave sessions running — kill them when done.
 - Don't use Boo for simple non-interactive commands; run those with
   Bash directly. Boo is for programs that need a live terminal.
+
+## Watchable subagents (`scripts/subagent-watch.sh`)
+
+Spawn a pi subagent *inside* a boo session so the human can attach and
+watch its full workflow live, while the orchestrator drives it headlessly.
+This is the **default** way to run subagents in this config (see AGENTS.md
+"Subagents — spawn them watchable"); it replaces the `Agent` tool for work
+the human wants to observe.
+
+    scripts/subagent-watch.sh spawn <name> "<task>" [--model M] [--agent A] [--cwd DIR]
+    scripts/subagent-watch.sh wait   <name> [--timeout 5m]
+    scripts/subagent-watch.sh result <name>     # rendered screen (scrollback)
+    scripts/subagent-watch.sh kill   <name>
+    scripts/subagent-watch.sh list
+
+- The subagent runs as an *interactive* pi (full TUI), so the human can
+  `boo attach <name>` to watch and `Ctrl-A d` to detach; it keeps running.
+- `--agent <name>` reads `~/.pi/agent/agents/<name>.md`, strips its YAML
+  frontmatter, and passes the body as `--append-system-prompt`, adopting the
+  agent's `model:` when `--model` is not given. Critics (critic-agnes, …)
+  thus behave identically to the extension's, but watchable.
+- Each subagent is a full pi agent: it loads all skills/AGENTS.md and costs
+  more context than an extension subagent. Accepted cost for live visibility.
