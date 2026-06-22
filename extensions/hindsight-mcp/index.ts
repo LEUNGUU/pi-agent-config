@@ -128,7 +128,9 @@ async function getClient(): Promise<Client> {
 export default function hindsightMcp(pi: ExtensionAPI) {
 	const registered = new Set<string>();
 
-	const wire = async (ctx: { ui: { notify: (m: string, l: string) => void } }) => {
+	const wire = async (ctx: {
+		ui: { notify: (m: string, l: "error" | "info" | "warning") => void };
+	}) => {
 		let c: Client;
 		try {
 			c = await getClient();
@@ -151,11 +153,15 @@ export default function hindsightMcp(pi: ExtensionAPI) {
 				description: tool.description ?? `Hindsight MCP tool: ${tool.name}`,
 				parameters: (tool.inputSchema as unknown as ReturnType<typeof Type.Object>) ??
 					Type.Object({}),
-				async execute(_toolCallId, params) {
-					const result = await c.callTool({
-						name: tool.name,
-						arguments: params as Record<string, unknown>,
-					});
+				async execute(_toolCallId, params, signal) {
+					const result = await c.callTool(
+						{
+							name: tool.name,
+							arguments: params as Record<string, unknown>,
+						},
+						undefined,
+						signal ? { signal } : undefined,
+					);
 					const content = (result.content as Array<{ type: string; text?: string }>) ?? [];
 					const text = content
 						.map((b) => (b.type === "text" ? (b.text ?? "") : `[${b.type}]`))
@@ -172,6 +178,19 @@ export default function hindsightMcp(pi: ExtensionAPI) {
 
 	pi.on("session_start", async (_event, ctx) => {
 		await wire(ctx);
+	});
+
+	// Close the MCP connection when the session ends (quit/reload), so we don't
+	// leak a dangling client + transport. wire() rebuilds it on the next start.
+	pi.on("session_shutdown", async () => {
+		try {
+			await client?.close();
+		} catch {
+			// ignore
+		}
+		client = undefined;
+		connecting = undefined;
+		registered.clear();
 	});
 
 	// --- Session capture: stream prompts + responses into Hindsight ---
