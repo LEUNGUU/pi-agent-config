@@ -42,6 +42,24 @@ When a task needs to drive an *interactive* terminal program — a REPL, a TUI, 
 - **Don't use boo for**: simple non-interactive commands — run those directly with bash/ssh. 
 - The human uses tmux for their own interactive work; the agent uses boo (driven headlessly via `new -d` / `send` / `wait` / `peek --json` / `kill` — the prefix key never matters for automation).
 
+## Subagents — spawn them watchable (DEFAULT)
+
+The human wants to watch every subagent work **live**. So **by default, do NOT use the `Agent` tool** (the `@tintinweb/pi-subagents` extension hides the child's workflow). Instead spawn each subagent as an interactive pi session inside boo, via `skills/boo-terminal/scripts/subagent-watch.sh`, so the human can `boo attach <name>` and see every tool call and reasoning step in real time.
+
+```bash
+skills/boo-terminal/scripts/subagent-watch.sh spawn <name> "<task>" [--model M] [--agent critic-agnes] [--cwd DIR]
+# then tell the human:  boo attach <name>   (detach: Ctrl-A d)
+skills/boo-terminal/scripts/subagent-watch.sh wait   <name> [--timeout 5m]   # block until idle
+skills/boo-terminal/scripts/subagent-watch.sh result <name>                  # read the rendered result
+skills/boo-terminal/scripts/subagent-watch.sh kill   <name>                  # tear down when done
+```
+
+- After spawning, **always print the `boo attach <name>` line** so the human knows how to watch.
+- `--agent <name>` loads the agent-type definition from `~/.pi/agent/agents/<name>.md` (same files the extension uses, e.g. the critic agents) as an appended system prompt and adopts its model — so critics behave identically, just watchable.
+- Collect results with `wait` then `result` (parse the rendered screen); `kill` each session when finished. Use unique names; run several in parallel as separate sessions.
+- Caveat: each watchable subagent is a *full* pi agent, so it loads all skills/AGENTS.md and uses more context/tokens than an extension subagent. That's the accepted cost of live visibility.
+- Exceptions (fall back to the `Agent` tool): trivial internal lookups where the human has no interest in watching, or when the orchestrator must programmatically react to many parallel structured results. When unsure, prefer watchable.
+
 ## Dynamic Workflows
 
 When a task is long-running, massively parallel, or adversarial, proactively consider the `dynamic-workflows` skill (orchestrates many fresh-context subagents; plan in code, judgment delegated). Watch for these signals and suggest the matching pattern before grinding through it in one context:

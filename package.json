@@ -16,6 +16,6 @@
     "themes": ["./themes"]
   },
   "scripts": {
-    "postinstall": "cd skills/brave-search && npm install && cd ../browser-tools && npm install && cd ../youtube-transcript && npm install"
+    "postinstall": "cd skills/brave-search && npm install && cd ../browser-tools && npm install && cd ../youtube-transcript && npm install && cd ../../extensions/hindsight-mcp && npm install"
   }
 }
