@@ -6,8 +6,11 @@
  * tools, and re-registers each one as a native pi tool (prefixed `hs_`). The
  * LLM then calls them like any other pi tool; calls are forwarded over MCP.
  *
- * Hindsight runs on the EC2 'hindsight' box, reached via an SSH tunnel:
- *   ssh -f -N -L 8888:localhost:8888 hindsight
+ * Hindsight runs on a self-hosted box reached over its HTTP MCP transport.
+ * The host:port is read from HINDSIGHT_HOST (default localhost:8888) so the
+ * real endpoint stays out of source control — set it in your environment,
+ * or run an SSH tunnel and leave the default:
+ *   ssh -f -N -L 8888:localhost:8888 <host>
  *
  * Single-bank mode: the URL pins all tools to the "pi" bank, so tool calls
  * don't need a bank_id argument.
@@ -21,11 +24,14 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
 
+/** Host:port of the Hindsight server; override via env to keep it out of git. */
+const HINDSIGHT_HOST = process.env.HINDSIGHT_HOST ?? "localhost:8888";
+
 /** Hindsight MCP endpoint (single-bank mode pins to bank "pi"). */
-const MCP_URL = "http://localhost:8888/mcp/pi/";
+const MCP_URL = `http://${HINDSIGHT_HOST}/mcp/pi/`;
 
 /** Hindsight REST base for the same bank — used by the session-capture hooks. */
-const RETAIN_URL = "http://localhost:8888/v1/default/banks/pi/memories";
+const RETAIN_URL = `http://${HINDSIGHT_HOST}/v1/default/banks/pi/memories`;
 
 // ---------------------------------------------------------------------------
 // Session capture
