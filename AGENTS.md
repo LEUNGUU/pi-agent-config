@@ -4,6 +4,10 @@
 
 If an `ONBOARDING.md` file exists at the repo root, read it first for a code-derived overview before exploring.
 
+If a `TERRAFORM_NOTES.md` file exists at the repo root (e.g. the `AWS_Accounts` /
+`AWS_Accounts-crm` worktrees), read it first — it holds that estate's layer layout,
+terraform version constraints, git rules, and pointers to per-topic docs.
+
 ## Conversational Style
 
 - Keep answers short, concise, and technical. No fluff, no cheerful filler, no emojis in commits, issues, PR comments, or code.
@@ -69,6 +73,7 @@ Spawn subagents with the built-in `Agent` tool (backed by the `@tintinweb/pi-sub
   - **`/agents` → conversation viewer** — select an agent to open a live-scrolling overlay of its full transcript; scroll up to pause follow, press `x` `x` to stop it mid-run.
 - **`steer_subagent`** injects a message into a running agent to redirect it without restarting; the injected message and the agent's response are visible in the conversation viewer.
 - Run several in parallel as separate background `Agent` calls (the extension queues them, default concurrency 4).
+- Delegate only large, genuinely independent tracks of work (e.g. a wide multi-file investigation). Don't delegate what you can finish yourself in a handful of tool calls, and don't spawn subagents to verify or double-check your own work. If one subagent can do it, use one.
 - boo is **not** for subagents anymore — keep it for interactive terminal programs and long-lived/detachable sessions only (see the boo-terminal skill).
 
 ## Dynamic Workflows
