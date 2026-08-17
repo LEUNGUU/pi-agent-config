@@ -16,6 +16,7 @@ const PHASES = ["plan", "build", "review", "done", "aborted"] as const;
 const EVENT_TYPES = new Set([
 	"WORKFLOW_STARTED",
 	"PLAN_SAVED",
+	"PLAN_APPROVED",
 	"BUILD_STARTED",
 	"BUILD_DONE",
 	"REVIEW_SAVED",
@@ -43,6 +44,7 @@ interface SimpleDlcState {
 	phase: Phase;
 	review_round: number;
 	verdict: Verdict;
+	plan_approved: boolean;
 	escape_hatch_offered: boolean;
 	history: HistoryEntry[];
 }
@@ -88,6 +90,7 @@ function initialState(slug: string, task: string): SimpleDlcState {
 		phase: "plan",
 		review_round: 0,
 		verdict: null,
+		plan_approved: false,
 		escape_hatch_offered: false,
 		history: [],
 	};
@@ -120,6 +123,7 @@ function normalizeState(raw: unknown, slug: string, task: string): SimpleDlcStat
 		phase,
 		review_round: parsedRound,
 		verdict,
+		plan_approved: Boolean(input.plan_approved),
 		escape_hatch_offered: Boolean(input.escape_hatch_offered),
 		history,
 	};
@@ -143,6 +147,11 @@ function writeState(cwd: string, state: SimpleDlcState): void {
 
 function safeNote(note: string | undefined): string {
 	return String(note ?? "").replace(/\r?\n/g, "\\n");
+}
+
+// Tool-result shape required by registerTool (details is mandatory).
+function toolText(text: string) {
+	return { content: [{ type: "text" as const, text }], details: undefined };
 }
 
 function appendHistory(state: SimpleDlcState, event: string, note?: string): void {
@@ -196,9 +205,28 @@ function summarizeState(state: SimpleDlcState): string {
 		`phase: ${state.phase}`,
 		`review_round: ${state.review_round}`,
 		`verdict: ${state.verdict ?? "none"}`,
+		`plan_approved: ${state.plan_approved}`,
 		`escape_hatch_offered: ${state.escape_hatch_offered}`,
 		`history_events: ${state.history.length}`,
 	].join("\n");
+}
+
+// Latest workflow in this project that is still in flight (not done/aborted).
+function latestInProgress(cwd: string): SimpleDlcState | undefined {
+	const latest = latestStatePath(cwd);
+	if (!latest) return undefined;
+	try {
+		const raw = JSON.parse(readFileSync(latest, "utf-8"));
+		const state = normalizeState(raw, raw.slug ?? "unknown", raw.task ?? "");
+		return state.phase === "done" || state.phase === "aborted" ? undefined : state;
+	} catch {
+		return undefined;
+	}
+}
+
+function statusText(state: SimpleDlcState): string {
+	const pending = state.phase === "plan" && !state.plan_approved ? " (awaiting plan approval)" : "";
+	return `simpledlc/${state.slug} · ${state.phase}${pending} · round ${state.review_round}`;
 }
 
 function buildDirective(task: string, slug: string, resume: boolean, phase: Phase, escapeOffered: boolean): string {
@@ -243,11 +271,13 @@ function buildDirective(task: string, slug: string, resume: boolean, phase: Phas
 		`2. **Plan.** Spawn \`Agent({ subagent_type: "planner", ... })\`, telling it the task and`,
 		`   the slug \`${slug}\`. It writes \`simpledlc/${slug}/plan.md\` itself and returns a short`,
 		`   summary. Then call \`simpledlc_state\` with action \`plan_saved\`, slug \`${slug}\`, and a`,
-		`   short note. STOP and show me the plan (read plan.md for the detail). Do NOT proceed`,
-		`   to build until I approve. If I ask for changes, re-spawn planner with my feedback (it`,
-		`   overwrites plan.md) and record \`plan_saved\` again.`,
+		`   short note. Show me the plan (read plan.md for the detail), then call the`,
+		`   \`simpledlc_gate\` tool with slug \`${slug}\` — it renders an approve/changes/abort`,
+		`   selector and records \`plan_approved\` on approval. The state machine BLOCKS building`,
+		`   until the gate approves. If I request changes, re-spawn planner with my feedback (it`,
+		`   overwrites plan.md), record \`plan_saved\` again, and present the gate again.`,
 		``,
-		`3. **Build.** Only after I approve the plan: spawn \`Agent({ subagent_type: "builder",`,
+		`3. **Build.** Only after the gate approves the plan: spawn \`Agent({ subagent_type: "builder",`,
 		`   ... })\`, telling it the slug \`${slug}\`. It reads plan.md and, on revision rounds,`,
 		`   existing review.md; it implements and writes/appends \`simpledlc/${slug}/build-log.md\``,
 		`   itself. Record \`build_started\` before spawning and \`build_done\` after it finishes.`,
@@ -271,10 +301,18 @@ function buildDirective(task: string, slug: string, resume: boolean, phase: Phas
 	].join("\n");
 }
 
+const gateToolParameters = Type.Object({
+	slug: Type.String({ description: "The simpledlc task slug" }),
+	summary: Type.Optional(
+		Type.String({ description: "One-line plan summary shown above the choices (optional)" }),
+	),
+});
+
 const stateToolParameters = Type.Object({
 	action: Type.Union(
 		[
 			Type.Literal("plan_saved"),
+			Type.Literal("plan_approved"),
 			Type.Literal("build_started"),
 			Type.Literal("build_done"),
 			Type.Literal("review_saved"),
@@ -298,6 +336,7 @@ const stateToolParameters = Type.Object({
 // Terminal phases (done, aborted) accept nothing — re-run /simpledlc for new work.
 const LEGAL_FROM: Record<string, Phase[]> = {
 	plan_saved: ["plan"],
+	plan_approved: ["plan"],
 	build_started: ["plan", "build", "review"],
 	build_done: ["build"],
 	review_saved: ["review"],
@@ -323,9 +362,22 @@ function applyTransition(state: SimpleDlcState, action: string, verdict?: Verdic
 		case "plan_saved":
 			state.phase = "plan";
 			state.verdict = null;
+			// A (re)saved plan always needs a fresh human approval.
+			state.plan_approved = false;
 			appendHistory(state, "PLAN_SAVED", note);
 			return { ok: true };
+		case "plan_approved":
+			if (state.plan_approved) return { ok: false, error: `Plan is already approved. State unchanged.` };
+			state.plan_approved = true;
+			appendHistory(state, "PLAN_APPROVED", note);
+			return { ok: true };
 		case "build_started":
+			if (state.phase === "plan" && !state.plan_approved) {
+				return {
+					ok: false,
+					error: `The plan has not been approved by the human. Present the plan with the simpledlc_gate tool (or ask directly) and record plan_approved first. State unchanged.`,
+				};
+			}
 			state.phase = "build";
 			appendHistory(state, "BUILD_STARTED", note);
 			return { ok: true };
@@ -379,11 +431,109 @@ function applyTransition(state: SimpleDlcState, action: string, verdict?: Verdic
 }
 
 export default function (pi: ExtensionAPI) {
+	// -----------------------------------------------------------------------
+	// Hard gate: block spawning the builder for a simpledlc task whose plan has
+	// not been human-approved. Prose alone ("wait for my approval") drifts; the
+	// blocking tool_call event makes it mechanical. Scoped narrowly: only fires
+	// when the Agent prompt references this project's in-flight simpledlc slug,
+	// so unrelated builder spawns are untouched.
+	pi.on("tool_call", async (event, ctx) => {
+		if (event.toolName !== "Agent") return;
+		const input = event.input as { subagent_type?: string; prompt?: string };
+		if (input?.subagent_type !== "builder" || typeof input.prompt !== "string") return;
+		const state = latestInProgress(ctx.cwd);
+		if (!state) return;
+		if (!input.prompt.includes(`simpledlc/${state.slug}`) && !input.prompt.includes(state.slug)) return;
+		if (state.phase === "plan" && !state.plan_approved) {
+			return {
+				block: true,
+				reason:
+					`simpledlc: the plan for \`${state.slug}\` has not been approved by the human. ` +
+					`Present it with the simpledlc_gate tool (which records plan_approved on approval) before spawning the builder.`,
+			};
+		}
+	});
+
+	// Recovery: after compaction or session resume the orchestrator loses the
+	// slug/phase from its context. Re-inject a one-line status of the in-flight
+	// workflow into the system prompt so it picks up where it left off instead
+	// of restarting from step 1.
+	pi.on("before_agent_start", async (event, ctx) => {
+		const state = latestInProgress(ctx.cwd);
+		if (!state) return;
+		return {
+			systemPrompt:
+				`${event.systemPrompt}\n\n` +
+				`[simpledlc] An in-progress workflow exists in this project:\n${summarizeState(state)}\n` +
+				`State file: simpledlc/${state.slug}/${STATE_FILE}. If asked to continue this task, resume from the current phase (do NOT restart from planning).`,
+		};
+	});
+
+	// Statusline: keep the workflow position visible in the footer.
+	pi.on("turn_end", async (_event, ctx) => {
+		const state = latestInProgress(ctx.cwd);
+		ctx.ui.setStatus("simpledlc", state ? statusText(state) : undefined);
+	});
+
+	// Structured approval gate: single-select (approve / changes / abort +
+	// free-text via Other). Approval and abort drive the state machine directly,
+	// so the human's click IS the transition — no separate bookkeeping call the
+	// orchestrator could forget or fake.
+	pi.registerTool({
+		name: "simpledlc_gate",
+		label: "simpledlc plan gate",
+		description:
+			"Present the simpledlc plan approval gate to the human. On 'Approve' it records plan_approved; on 'Abort' it aborts the workflow. Returns the human's choice. Call this after plan_saved, before building.",
+		parameters: gateToolParameters,
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx: ExtensionContext) {
+			const state = readState(ctx.cwd, params.slug);
+			if (state.phase !== "plan") {
+				return toolText(`ERROR: gate applies to phase "plan" only (current: ${state.phase}).\n\n${summarizeState(state)}`);
+			}
+			if (!ctx.hasUI) {
+				// Non-interactive: never auto-approve; the gate holds.
+				return toolText("No interactive UI available; the plan gate remains held (no answer).");
+			}
+			const title = params.summary
+				? `simpledlc/${params.slug} — approve this plan?\n${params.summary}`
+				: `simpledlc/${params.slug} — approve this plan?`;
+			const picked = await ctx.ui.select(title, [
+				"Approve — proceed to build",
+				"Request changes — revise the plan",
+				"Abort — stop this workflow",
+				"Other — type feedback",
+			]);
+			if (picked === undefined) {
+				return toolText("User dismissed the gate without answering; the plan gate remains held.");
+			}
+			if (picked.startsWith("Approve")) {
+				const result = applyTransition(state, "plan_approved", null, "Approved via simpledlc_gate.");
+				if (!result.ok) return toolText(`ERROR: ${result.error}\n\n${summarizeState(state)}`);
+				writeState(ctx.cwd, state);
+				return toolText(`Plan APPROVED (plan_approved recorded). Proceed to build.\n\n${summarizeState(state)}`);
+			}
+			if (picked.startsWith("Abort")) {
+				const result = applyTransition(state, "abort", null, "Aborted via simpledlc_gate.");
+				if (!result.ok) return toolText(`ERROR: ${result.error}\n\n${summarizeState(state)}`);
+				writeState(ctx.cwd, state);
+				return toolText(`Workflow ABORTED.\n\n${summarizeState(state)}`);
+			}
+			let answer = picked;
+			if (picked.startsWith("Other")) {
+				const typed = await ctx.ui.input("Describe your feedback on the plan", "");
+				answer = typed && typed.trim().length > 0 ? `Other: ${typed.trim()}` : picked;
+			}
+			return toolText(
+				`User answered: ${answer}\nThe plan is NOT approved. Revise it (re-spawn planner, record plan_saved) and present the gate again.`,
+			);
+		},
+	});
+
 	pi.registerTool({
 		name: "simpledlc_state",
 		label: "simpledlc state",
 		description:
-			"Record a deterministic simpledlc workflow state transition (plan_saved, build_started, build_done, review_saved, complete, abort). Returns the resulting state summary; watch for an ESCAPE HATCH notice on review_saved.",
+			"Record a deterministic simpledlc workflow state transition (plan_saved, plan_approved, build_started, build_done, review_saved, complete, abort). plan_approved is normally recorded by the simpledlc_gate tool; build_started is rejected until the plan is approved. Returns the resulting state summary; watch for an ESCAPE HATCH notice on review_saved.",
 		parameters: stateToolParameters,
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx: ExtensionContext) {
 			const { action, slug, verdict, note } = params;
@@ -391,11 +541,11 @@ export default function (pi: ExtensionAPI) {
 			const result = applyTransition(state, action, verdict ?? null, note);
 			if (!result.ok) {
 				// Reject illegal/unknown transitions without mutating state on disk.
-				return { content: [{ type: "text", text: `ERROR: ${result.error}\n\n${summarizeState(state)}` }] };
+				return toolText(`ERROR: ${result.error}\n\n${summarizeState(state)}`);
 			}
 			writeState(ctx.cwd, state);
 			const text = result.notice ? `${result.notice}\n\n${summarizeState(state)}` : summarizeState(state);
-			return { content: [{ type: "text", text }] };
+			return toolText(text);
 		},
 	});
 
