@@ -18,7 +18,9 @@ cd ~/pi-agent-config
 ./setup.sh
 ```
 
-This copies config files to `~/.pi/agent/` and installs the repo as a local pi package.
+This copies config files to `~/.pi/agent/` and installs the repo as a local pi package. It also installs the [pi-diff-review](https://github.com/badlogic/pi-diff-review) extension (native `/diff-review` window via Glimpse + Monaco), patching its broken `prepare` script so the install completes.
+
+> pi-diff-review builds a native host during install. Ensure the platform toolchain is present first: **macOS** Xcode Command Line Tools (`swiftc`), **Linux** Rust + GTK4/WebKit dev packages, **Windows** .NET 8 SDK + WebView2. The review window also loads Monaco/Tailwind from CDNs, so it needs internet at open time.
 
 ## Structure
 

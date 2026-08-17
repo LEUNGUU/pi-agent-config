@@ -7,6 +7,6 @@
   "packages": [
     "../../development/github.com/LEUNGUU/pi-agent-config",
     "npm:@tintinweb/pi-subagents",
-    "npm:@pi-lab/notify"
+    "git:https://github.com/badlogic/pi-diff-review"
   ]
 }
