@@ -1,9 +1,20 @@
 {
-  "lastChangelogVersion": "0.78.0",
-  "defaultThinkingLevel": "medium",
+  "lastChangelogVersion": "0.84.1",
+  "defaultThinkingLevel": "high",
   "defaultProvider": "kiro",
-  "defaultModel": "claude-opus-4.8",
-  "theme": "catppuccin-mocha",
+  "defaultModel": "claude-opus-5",
+  "enabledModels": [
+    "kiro/*",
+    "agnes/*",
+    "deepseek/*",
+    "bedrock-openai/*",
+    "amazon-bedrock/us.anthropic.claude-sonnet-5",
+    "amazon-bedrock/us.anthropic.claude-fable-5"
+  ],
+  "theme": "light/catppuccin-mocha",
+  "terminal": {
+    "showTerminalProgress": true
+  },
   "packages": [
     "../../development/github.com/LEUNGUU/pi-agent-config",
     "npm:@tintinweb/pi-subagents",
