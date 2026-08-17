@@ -21,16 +21,6 @@ if [[ -d "$REPO_DIR/agents" ]]; then
     echo "Copied agents"
 fi
 
-# Restore the customized otty-integration.ts into ~/.pi/agent/extensions/.
-# Otty rewrites that file with its stock template on every app update, which
-# drops our customizations (agent_settled idle, otty:awaiting badge wiring).
-# Re-running setup.sh puts the customized version back.
-if [[ -f "$REPO_DIR/extensions/otty-integration.ts" ]]; then
-    mkdir -p "$PI_DIR/extensions"
-    cp "$REPO_DIR/extensions/otty-integration.ts" "$PI_DIR/extensions/otty-integration.ts"
-    echo "Restored customized otty-integration.ts"
-fi
-
 # Install as pi package for extensions, skills, prompts, and themes
 if command -v pi >/dev/null 2>&1; then
     pi install "$REPO_DIR"

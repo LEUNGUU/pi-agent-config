@@ -6,6 +6,11 @@ sessions/
 cache/
 WORKLOG.md
 
+# Otty-managed: Otty overwrites this with its stock template on every
+# "Install Pi Integration" (extensions/ is symlinked into ~/.pi/agent, so it
+# writes straight into this repo). Our additions live in otty-custom-states.ts.
+extensions/otty-integration.ts
+
 # Node modules in skills
 **/node_modules/
 
