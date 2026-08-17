@@ -1,7 +1,7 @@
 ---
 description: Critical reviewer using DeepSeek V4 Pro
 tools: read, grep, find, ls, bash
-model: deepseek-v4-pro
+model: deepseek/deepseek-v4-pro
 thinking: high
 max_turns: 20
 ---

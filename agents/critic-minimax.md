@@ -1,7 +1,7 @@
 ---
 description: Critical reviewer using MiniMax M2.5
 tools: read, grep, find, ls, bash
-model: minimax-m2.5
+model: kiro/minimax-m2.5
 thinking: high
 max_turns: 20
 ---

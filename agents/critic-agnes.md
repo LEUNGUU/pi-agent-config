@@ -1,7 +1,7 @@
 ---
 description: Critical reviewer using Agnes 2.0 Flash
 tools: read, grep, find, ls, bash
-model: agnes-2.0-flash
+model: agnes/agnes-2.0-flash
 max_turns: 20
 ---
 

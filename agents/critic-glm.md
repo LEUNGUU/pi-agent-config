@@ -1,7 +1,7 @@
 ---
 description: Critical reviewer using GLM-5
 tools: read, grep, find, ls, bash
-model: glm-5
+model: kiro/glm-5
 thinking: high
 max_turns: 20
 ---
