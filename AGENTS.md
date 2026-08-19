@@ -78,17 +78,20 @@ Spawn subagents with the built-in `Agent` tool (backed by the `@tintinweb/pi-sub
 
 ## Code Walkthroughs (伴读)
 
-When the user asks to be walked through code ("带我读", "walk me through", "伴读", explaining code you just wrote):
+Prefer the `/reading <target>` command — it starts a harness that auto-opens every file the
+agent reads in an Otty split, so pane-opening is guaranteed by code, not by the model.
 
-- Before discussing a file, open it beside the user: `otty view <absolute-path> --right`
-  (read-only pane in Otty; requires `otty` on PATH — fall back to just citing paths if the command fails).
-  Reuse one split — opening a new file replaces the need for the user to touch the file tree.
+When the user asks to be walked through code in plain language ("带我读", "walk me through",
+"伴读") without the command, suggest `/reading` once, then follow these rules:
+
 - Cite every code location as a bare `path:line` (e.g. `src/foo.py:87`) on its own line — Otty makes
   these ⌘-clickable. Prefer `path:line` anchors over pasting long code blocks into chat.
 - Walk one function/block at a time, in dependency order (leaf utilities → callers → entry point).
   After each unit, stop and wait for questions — do not dump the whole tour in one turn.
 - The user may reply with just a `path:line` — treat that as "explain this location": read the
   surrounding code and explain it in context.
+- If reading mode is off (no harness), also open each file beside the user before discussing it:
+  `otty view <absolute-path> --right` (fall back to just citing paths if the command fails).
 
 ## Dynamic Workflows
 
