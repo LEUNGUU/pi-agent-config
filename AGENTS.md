@@ -76,6 +76,20 @@ Spawn subagents with the built-in `Agent` tool (backed by the `@tintinweb/pi-sub
 - Delegate only large, genuinely independent tracks of work (e.g. a wide multi-file investigation). Don't delegate what you can finish yourself in a handful of tool calls, and don't spawn subagents to verify or double-check your own work. If one subagent can do it, use one.
 - boo is **not** for subagents anymore — keep it for interactive terminal programs and long-lived/detachable sessions only (see the boo-terminal skill).
 
+## Code Walkthroughs (伴读)
+
+When the user asks to be walked through code ("带我读", "walk me through", "伴读", explaining code you just wrote):
+
+- Before discussing a file, open it beside the user: `otty view <absolute-path> --right`
+  (read-only pane in Otty; requires `otty` on PATH — fall back to just citing paths if the command fails).
+  Reuse one split — opening a new file replaces the need for the user to touch the file tree.
+- Cite every code location as a bare `path:line` (e.g. `src/foo.py:87`) on its own line — Otty makes
+  these ⌘-clickable. Prefer `path:line` anchors over pasting long code blocks into chat.
+- Walk one function/block at a time, in dependency order (leaf utilities → callers → entry point).
+  After each unit, stop and wait for questions — do not dump the whole tour in one turn.
+- The user may reply with just a `path:line` — treat that as "explain this location": read the
+  surrounding code and explain it in context.
+
 ## Dynamic Workflows
 
 For long-running, massively parallel, or adversarial tasks, consider the `dynamic-workflows` skill (orchestrates fresh-context subagents; plan in code, judgment delegated). Suggest the matching pattern before grinding through it in one context:
