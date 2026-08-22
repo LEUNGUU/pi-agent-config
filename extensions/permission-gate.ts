@@ -22,30 +22,23 @@ export default function (pi: ExtensionAPI) {
 				return { block: true, reason: "Dangerous command blocked (no UI for confirmation)" };
 			}
 
-			// Auto-deny after 30 seconds
-			const controller = new AbortController();
-			const timeoutId = setTimeout(() => controller.abort(), 30000);
-
 			// Let the Otty integration flip the pane badge to "awaiting" while this
-			// dialog blocks, so a backgrounded tab shows it needs attention rather
-			// than silently timing out.
+			// dialog blocks, so a backgrounded tab shows it needs attention.
 			pi.events.emit("otty:awaiting", {});
 
 			let choice: string | undefined;
 			try {
+				// No timeout: wait indefinitely for the user's decision.
 				choice = await ctx.ui.select(
-					`⚠️ Dangerous command:\n\n  ${command}\n\nAllow? (auto-deny in 30s)`,
-					["Yes", "No"],
-					{ signal: controller.signal }
+					`⚠️ Dangerous command:\n\n  ${command}\n\nAllow?`,
+					["Yes", "No"]
 				);
 			} finally {
-				clearTimeout(timeoutId);
 				pi.events.emit("otty:awaiting-done", {});
 			}
 
 			if (choice !== "Yes") {
-				const reason = controller.signal.aborted ? "Timed out" : "Blocked by user";
-				return { block: true, reason };
+				return { block: true, reason: "Blocked by user" };
 			}
 		}
 
