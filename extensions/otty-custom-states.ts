@@ -20,6 +20,10 @@
 //    runs automatically". We re-report idle there so the task-complete badge
 //    is authoritative.
 //
+// 3. session name → pane label — `/name` (or pi.setSessionName()) fires
+//    session_info_changed; we forward the name via `label=` so the Otty pane
+//    shows the session name. Subsequent state reports keep re-sending it.
+//
 // Duplicate idle/processing reports are harmless — Otty state updates are
 // idempotent per session-id.
 import { spawn } from "node:child_process";
@@ -51,7 +55,7 @@ function cwdFor(ctx: any): string {
 
 // Otty accepts exactly: processing | idle | awaiting.
 // Fire-and-forget; detached + unref'd so it never blocks the agent process.
-function notify(sessionId: string, state: string, cwd: string) {
+function notify(sessionId: string, state: string, cwd: string, label?: string) {
 	if (!sessionId) return;
 	const args = [
 		`state:${OTTY_AGENT}`,
@@ -60,6 +64,7 @@ function notify(sessionId: string, state: string, cwd: string) {
 		`agent-pid=${process.pid}`,
 	];
 	if (cwd) args.push(`cwd=${cwd}`);
+	if (label) args.push(`label=${label}`);
 	const env = { ...process.env, OTTY_SOCKET };
 	try {
 		const proc = spawn(OTTY_CLI, args, { stdio: "ignore", detached: true, env });
@@ -74,6 +79,9 @@ export default function (pi: ExtensionAPI) {
 	// populated before any prompt can block.
 	let lastSessionId = "";
 	let lastCwd = "";
+	let lastName: string | undefined;
+	// Best-known badge state, so a rename can re-report without flipping it.
+	let lastState = "idle";
 
 	function track(ctx: any) {
 		lastSessionId = sessionIdFor(ctx);
@@ -85,20 +93,32 @@ export default function (pi: ExtensionAPI) {
 	});
 	pi.on("agent_start", async (_event, ctx) => {
 		track(ctx);
+		lastState = "processing";
 	});
 	// Authoritative task-complete: fires only once nothing more runs
 	// automatically (after auto-retry / auto-compact / queued follow-ups).
 	pi.on("agent_settled", async (_event, ctx) => {
 		track(ctx);
-		notify(lastSessionId, "idle", lastCwd);
+		lastState = "idle";
+		notify(lastSessionId, "idle", lastCwd, lastName);
+	});
+
+	// Session renamed via /name, RPC, or pi.setSessionName(): update the pane
+	// label immediately, re-sending the current state unchanged.
+	pi.on("session_info_changed", async (event, ctx) => {
+		track(ctx);
+		lastName = (event as any).name || undefined;
+		notify(lastSessionId, lastState, lastCwd, lastName);
 	});
 
 	// Blocking UI prompts have no lifecycle event, so the extension that
 	// blocks announces itself here (see permission-gate.ts).
 	pi.events.on("otty:awaiting", () => {
-		notify(lastSessionId, "awaiting", lastCwd);
+		lastState = "awaiting";
+		notify(lastSessionId, "awaiting", lastCwd, lastName);
 	});
 	pi.events.on("otty:awaiting-done", () => {
-		notify(lastSessionId, "processing", lastCwd);
+		lastState = "processing";
+		notify(lastSessionId, "processing", lastCwd, lastName);
 	});
 }
