@@ -11,7 +11,7 @@
 // session (deduped) so repeated chunked reads don't spam panes.
 //
 // Usage:
-//   /reading <file or topic>  — start a guided walkthrough (sends directive)
+//   /reading <file or topic>  — start a guided walkthrough (expands prompts/walkthrough.md)
 //   /reading                  — toggle auto-open on/off without a directive
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -27,24 +27,6 @@ function ottyBin(): string | null {
 
 // Skip files a human wouldn't want popping up while being walked through code.
 const SKIP = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|gz|tar|jsonl|lock|min\.js|map)$/i;
-
-function buildDirective(target: string): string {
-	return [
-		`Walk me through the following, as a guided reading session (伴读): ${target}`,
-		"",
-		"A harness mirrors every file you `read` into a pane beside me automatically —",
-		"do NOT run `otty view` yourself. Your job is the narration:",
-		"",
-		"1. Start with a one-paragraph orientation and the reading order (dependency order).",
-		"2. Walk ONE file (or one function/block for large files) per turn. Read the file",
-		"   with the read tool first, then explain: what it does, why it exists, edge cases,",
-		"   non-obvious choices. Quote at most a few key lines.",
-		"3. Cite every location as a bare `path:line` on its own line (⌘-clickable for me).",
-		"4. End each turn with what you'd cover next, then STOP and wait.",
-		"5. If I reply with just a `path:line`, explain that location in context.",
-		'6. If I say "continue" / "继续", move to the next unit.',
-	].join("\n");
-}
 
 export default function (pi: ExtensionAPI) {
 	let enabled = false;
@@ -77,7 +59,8 @@ export default function (pi: ExtensionAPI) {
 				enabled = true;
 				opened.clear();
 				ctx.ui.notify("Reading mode ON — files the agent reads will open in an Otty split", "info");
-				pi.sendUserMessage(buildDirective(target));
+				// Expand prompts/walkthrough.md so the directive lives in one place.
+				pi.sendUserMessage(`/walkthrough ${target}`, { expandPromptTemplates: true });
 				return;
 			}
 			enabled = !enabled;
