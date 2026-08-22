@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.84.1",
+  "lastChangelogVersion": "0.84.2",
   "defaultThinkingLevel": "high",
   "defaultProvider": "kiro",
   "defaultModel": "claude-opus-5",
@@ -19,5 +19,6 @@
     "../../development/github.com/LEUNGUU/pi-agent-config",
     "npm:@tintinweb/pi-subagents",
     "git:https://github.com/badlogic/pi-diff-review"
-  ]
+  ],
+  "tuiMode": "fullscreen"
 }
