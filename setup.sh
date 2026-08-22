@@ -6,19 +6,37 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 mkdir -p "$PI_DIR"
 
-# Copy global config files that pi packages don't handle (real files, not symlinks)
-for f in settings.json models.json AGENTS.md; do
-    if [[ -f "$REPO_DIR/$f" ]]; then
-        cp "$REPO_DIR/$f" "$PI_DIR/$f"
-        echo "Copied $f"
+# Symlink config into the repo so live edits and repo stay one file.
+# pi writes settings.json in place (writeFileSync), which follows symlinks,
+# so runtime changes (e.g. /settings, lastChangelogVersion bumps) land in the
+# repo working tree and just need a commit — no more copy drift.
+link() {
+    local src="$1" dst="$2"
+    if [[ -e "$dst" && ! -L "$dst" ]]; then
+        mv "$dst" "$dst.bak"
+        echo "Backed up $dst -> $dst.bak"
     fi
+    ln -sfn "$src" "$dst"
+    echo "Linked $(basename "$dst")"
+}
+
+for f in settings.json AGENTS.md; do
+    link "$REPO_DIR/$f" "$PI_DIR/$f"
 done
 
-# Copy custom subagents (discovered from ~/.pi/agent/agents/, not via packages)
-if [[ -d "$REPO_DIR/agents" ]]; then
-    mkdir -p "$PI_DIR/agents"
-    cp "$REPO_DIR/agents/"*.md "$PI_DIR/agents/"
-    echo "Copied agents"
+# Subagents (discovered from ~/.pi/agent/agents/, not via packages)
+mkdir -p "$PI_DIR/agents"
+for f in "$REPO_DIR/agents/"*.md; do
+    link "$f" "$PI_DIR/agents/$(basename "$f")"
+done
+
+# models.json is machine-specific (kiro gateway baseUrl, key placeholders) and
+# this repo is public — never symlink it back into git. Seed once, edit live.
+if [[ ! -f "$PI_DIR/models.json" ]]; then
+    cp "$REPO_DIR/models.json" "$PI_DIR/models.json"
+    echo "Seeded models.json — edit $PI_DIR/models.json (kiro baseUrl, API keys)"
+else
+    echo "models.json exists; left untouched (machine-specific)"
 fi
 
 # Install as pi package for extensions, skills, prompts, and themes
@@ -49,4 +67,7 @@ else
     echo "Warning: pi not found. Install pi and run: pi install $REPO_DIR"
 fi
 
-echo "Done. Config copied to $PI_DIR"
+echo "Done. Config linked into $PI_DIR"
+echo "Remaining manual steps on a new machine:"
+echo "  - ~/.pi/agent/auth.json (credentials are never in this repo)"
+echo "  - ~/.pi/agent/models.json endpoints (kiro gateway baseUrl)"

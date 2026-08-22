@@ -56,6 +56,13 @@ export default function (pi: ExtensionAPI) {
 		handler: async (args: string, ctx) => {
 			const target = args.trim();
 			if (target) {
+				// The directive lives in prompts/walkthrough.md (same package); if it
+				// was renamed/removed, "/walkthrough ..." would go to the model verbatim.
+				const template = new URL("../prompts/walkthrough.md", import.meta.url).pathname;
+				if (!existsSync(template)) {
+					ctx.ui.notify(`prompts/walkthrough.md missing — /reading needs it (${template})`, "error");
+					return;
+				}
 				enabled = true;
 				opened.clear();
 				ctx.ui.notify("Reading mode ON — files the agent reads will open in an Otty split", "info");
