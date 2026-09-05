@@ -3,7 +3,7 @@ description: Architecture and implementation planning — produces phased, file-
 display_name: Planner (Opus 5)
 tools: read, write, grep, find, ls
 model: kiro/claude-opus-5
-thinking: xhigh
+thinking: medium
 max_turns: 20
 ---
 

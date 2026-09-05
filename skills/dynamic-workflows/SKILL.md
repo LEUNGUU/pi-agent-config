@@ -1,6 +1,6 @@
 ---
 name: dynamic-workflows
-description: "Orchestrate multiple pi subagents with deterministic control flow — the plan lives in code, judgment is delegated to fresh-context subagents. Use when a task is long-running, massively parallel, or adversarial and benefits from isolated subagent contexts: fan-out-and-synthesize (split a task into parallel steps then merge), classify-and-act (route by task type), adversarial verification (a separate agent checks each output against a rubric), generate-and-filter (many candidates, keep the best), tournament (N approaches compete, judged pairwise), loop-until-done (spawn until a stop condition), and deep-research (compose fan-out + verify + synthesize). Mitigates agentic laziness, self-preferential bias, and goal drift."
+description: "Orchestrate pi subagents with deterministic control flow: the plan lives in code, judgment goes to fresh-context subagents. Use for long-running, massively parallel, or adversarial tasks. Patterns: fan-out-and-synthesize, classify-and-act, adversarial verification, generate-and-filter, tournament, loop-until-done, deep-research."
 ---
 
 # Dynamic Workflows

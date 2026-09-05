@@ -1,8 +1,8 @@
 ---
-description: Implements a given plan thoroughly and correctly. Has write access. Cross-model builder (GPT-5.6 Sol).
-display_name: Builder (GPT-5.6 Sol)
+description: Implements a given plan thoroughly and correctly. Has write access. Mid-tier builder (Sonnet 5, 1.30x credits); pair with builder-frontier for prewalk.
+display_name: Builder (Sonnet 5)
 tools: read, write, edit, bash, grep, find, ls
-model: kiro/gpt-5.6-sol
+model: kiro/claude-sonnet-5
 thinking: medium
 max_turns: 40
 ---
