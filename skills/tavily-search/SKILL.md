@@ -1,7 +1,7 @@
 ---
 name: tavily-search
 description: |
-  Search the web with LLM-optimized results via the Tavily CLI. This is the DEFAULT web search skill. Use it when the user wants to search the web, find articles, look up information, get recent news, discover sources, or says "search for", "find me", "look up", "what's the latest on", "find articles about", or needs current information from the internet. Returns relevant results with content snippets, relevance scores, and metadata — optimized for LLM consumption. Supports domain filtering, time ranges, and multiple search depths. Tavily has a free quota of 1,000 credits/month; if a request fails with a quota/credit/rate-limit error (e.g. 429 or insufficient credits), fall back to the brave-search skill.
+  Search the web with LLM-optimized results via the Tavily CLI. This is the DEFAULT web search skill. Use when the user wants to search, look up, find articles, or get current news/information from the internet. Supports domain filtering, time ranges, and search depths. On quota or rate-limit errors (e.g. 429), fall back to the brave-search skill.
 allowed-tools: Bash(tvly *)
 ---
 

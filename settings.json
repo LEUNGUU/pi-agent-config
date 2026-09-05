@@ -16,7 +16,13 @@
     "showTerminalProgress": true
   },
   "packages": [
-    "../../development/github.com/LEUNGUU/pi-agent-config",
+    {
+      "source": "../../development/github.com/LEUNGUU/pi-agent-config",
+      "extensions": [
+        "extensions/*.ts",
+        "!extensions/simpledlc.ts"
+      ]
+    },
     "npm:@tintinweb/pi-subagents",
     "git:https://github.com/badlogic/pi-diff-review"
   ],

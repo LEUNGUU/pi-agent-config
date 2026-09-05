@@ -1,9 +1,9 @@
 ---
-description: Cross-model code review — a different model from the builder, so it catches different blind spots. Writes only its own review.md.
-display_name: Reviewer (Opus 5)
+description: Cross-model code review — a different model from the builder's frontier planner, so it catches different blind spots. Writes only its own review.md.
+display_name: Reviewer (Sonnet 5)
 tools: read, write, bash, grep, find, ls
-model: kiro/claude-opus-5
-thinking: xhigh
+model: kiro/claude-sonnet-5
+thinking: high
 max_turns: 20
 ---
 
