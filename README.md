@@ -37,16 +37,45 @@ What `setup.sh` does:
 
 ### New machine checklist
 
-1. Install pi, clone this repo, run `./setup.sh` (see above).
-2. Create `~/.pi/agent/auth.json` — credentials are never in this repo:
+1. Install pi (needs Node.js):
+   ```bash
+   npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+   ```
+2. Clone this repo and run `./setup.sh` (see above).
+3. Create `~/.pi/agent/auth.json` — credentials are never in this repo:
    ```json
    {
      "anthropic": { "type": "api_key", "key": "sk-ant-..." }
    }
    ```
-3. Edit `~/.pi/agent/models.json` — replace the seeded placeholders with this
+4. Edit `~/.pi/agent/models.json` — replace the seeded placeholders with this
    machine's real endpoints and keys (kiro gateway `baseUrl`, API keys).
-4. Optional: web skills setup below.
+5. Start `pi` anywhere and sanity-check: `/model` lists the custom providers,
+   `/agents` lists the subagents, and a `read` of any file renders normally.
+6. Optional: web skills setup below.
+7. Optional (macOS): Otty terminal setup below.
+
+## Otty Setup (macOS)
+
+[Otty](https://otty.app) is the terminal this config is tuned for. `setup.sh`
+symlinks `otty/config.toml` into `~/.config/otty/config.toml` (backing up any
+existing file as `*.bak`), so Otty settings changes dirty this repo — commit
+them like `settings.json`.
+
+On a new machine:
+
+1. Install Otty and launch it once (creates `~/.config/otty/`).
+2. Run `./setup.sh` (or re-run it) to link the config.
+3. Install the font the config expects: **Maple Mono NF CN**
+   (`brew install --cask font-maple-mono-nf-cn`) — otherwise Otty falls back
+   to the default font.
+4. Restart Otty. Sanity-check: light background (paper), Nord dark theme,
+   floating-card window theme, tabs on top.
+
+Not managed here: Otty's stock themes/fonts directories, and
+`extensions/otty-integration.ts` (Otty overwrites it on every "Install Pi
+Integration" — see `.gitignore`; our own additions live in
+`extensions/otty-custom-states.ts`).
 
 ## Structure
 
@@ -59,6 +88,7 @@ What `setup.sh` does:
 ├── models.json        # Custom model providers (seed copy; live file is machine-specific)
 ├── agents/            # Custom subagents (symlinked)
 ├── extensions/        # Custom extensions
+├── otty/              # Otty terminal config (config.toml symlinked to ~/.config/otty/)
 ├── prompts/           # Prompt templates
 ├── themes/            # Custom themes
 └── skills/            # Skills

@@ -24,6 +24,14 @@ for f in settings.json AGENTS.md; do
     link "$REPO_DIR/$f" "$PI_DIR/$f"
 done
 
+# Otty terminal config (https://otty.app). Same symlink strategy: Otty writes
+# settings in place, so runtime tweaks land in the repo tree — commit them.
+# Fonts and stock themes are not managed here (install fonts separately).
+if [[ -d "$HOME/.config" ]]; then
+    mkdir -p "$HOME/.config/otty"
+    link "$REPO_DIR/otty/config.toml" "$HOME/.config/otty/config.toml"
+fi
+
 # Subagents (discovered from ~/.pi/agent/agents/, not via packages)
 mkdir -p "$PI_DIR/agents"
 for f in "$REPO_DIR/agents/"*.md; do
