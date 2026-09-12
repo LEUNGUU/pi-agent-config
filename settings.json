@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.84.2",
+  "lastChangelogVersion": "0.85.1",
   "defaultThinkingLevel": "high",
   "defaultProvider": "kiro",
   "defaultModel": "claude-opus-5",
@@ -11,7 +11,7 @@
     "amazon-bedrock/us.anthropic.claude-sonnet-5",
     "amazon-bedrock/us.anthropic.claude-fable-5"
   ],
-  "theme": "light/catppuccin-mocha",
+  "theme": "paper-green/catppuccin-mocha",
   "terminal": {
     "showTerminalProgress": true
   },

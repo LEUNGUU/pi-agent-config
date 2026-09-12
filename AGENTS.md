@@ -80,7 +80,7 @@ Match model to task; don't burn frontier tokens on mechanical work. Prefer `kiro
 - **Cheap** (`kiro/minimax-m2.5` 0.25x, `kiro/claude-haiku-4.5` 0.40x, `kiro/glm-5` 0.50x): mechanical/maintenance work — renames, config tweaks, format fixes, bulk edits, log triage, summarization/rewriting. Default for fan-out subagents.
 - **Mid** (`kiro/claude-sonnet-5` 1.30x): standard implementation against an existing plan or established pattern.
 - **Frontier** (`kiro/claude-opus-5` 2.20x, `kiro/gpt-5.6-sol` 2.40x): judgment work only — planning, architecture, first-task pattern-setting (prewalk), critique, user-facing prose.
-- **Prewalk**: for multi-step builds, frontier plans and implements the FIRST node to set the pattern, then cheaper models implement the rest following that example.
+- **Prewalk (apply automatically, no need for the human to ask)**: when a build task has 3+ similar steps/nodes, spawn `builder-frontier` (opus) to implement the FIRST one and write pattern notes, then `builder` (sonnet) for the rest following that exemplar. Small tasks: just do them or spawn `builder` alone.
 
 ## Subagents — use the `Agent` tool (DEFAULT)
 
