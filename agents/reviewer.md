@@ -1,8 +1,8 @@
 ---
 description: Cross-model code review — a different model from the builder's frontier planner, so it catches different blind spots. Writes only its own review.md.
-display_name: Reviewer (Sonnet 5)
+display_name: Reviewer (GPT 5.6 Terra)
 tools: read, write, bash, grep, find, ls
-model: kiro/claude-sonnet-5
+model: kiro/gpt-5.6-terra
 thinking: high
 max_turns: 20
 ---
