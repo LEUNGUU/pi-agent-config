@@ -31,25 +31,17 @@ export default function (pi: ExtensionAPI) {
 		if (!model) return undefined;
 
 		try {
-			const auth = await ctx.modelRegistry.getProviderAuth(providerId);
-			const requestModel = auth?.auth.baseUrl ? { ...model, baseUrl: auth.auth.baseUrl } : model;
-			// ProviderHeaders allows null (deleted header markers); compact() wants Record<string, string>
-			let headers: Record<string, string> | undefined;
-			if (auth?.auth.headers) {
-				headers = Object.fromEntries(
-					Object.entries(auth.auth.headers).filter((e): e is [string, string] => e[1] != null),
-				);
-			}
+			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+			if (!auth.ok) throw new Error(auth.error);
 			const result = await compact(
 				event.preparation,
-				requestModel,
-				auth?.auth.apiKey,
-				headers,
+				model,
+				auth.apiKey,
+				auth.headers,
 				event.customInstructions,
 				event.signal,
-				ctx.thinkingLevel,
+				pi.getThinkingLevel(),
 				undefined, // streamFn: default
-				auth?.env,
 			);
 			return { compaction: result };
 		} catch (error) {
