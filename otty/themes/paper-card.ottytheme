@@ -1,0 +1,98 @@
+[meta]
+name        = "Paper Card"
+author      = "Otty"
+mode        = "light"
+description = "Floating Card with a warm paper background (repo-managed; see pi-agent-config/otty)."
+
+[terminal]
+foreground           = "#1a1b18"
+background           = "#F0E4C2"
+palette = [
+    "#24292E", "#D73A49", "#28A745", "#DBAB09",
+    "#0366D6", "#5A32A3", "#0598BC", "#d4d6d7",
+    "#959DA5", "#CB2431", "#22863A", "#B08800",
+    "#005CC5", "#5A32A3", "#3192AA", "#D1D5DA",
+]
+cursor               = "#18181B"
+selection-background = "#4a6640"
+
+[token]
+foreground = "#18181B"
+secondary  = "#52525B"
+tertiary   = "#A1A1AA"
+accent    = "#000000"
+radius    = 8
+font-ui   = ["-apple-system", "BlinkMacSystemFont", "SF Pro", "sans-serif"]
+# otty-original: token.font-mono = ""
+font-mono = "Maple Mono NF CN"
+font-size = 13
+
+# The window itself becomes a translucent frosted panel. The sidebar,
+# titlebar area, and the margin strip around the card all share this
+# one backdrop (no per-section material needed).
+
+[panel]
+background = "#F0E4C2"
+surface    = "#E8DBB4"
+border     = "#D6C79C"
+
+[window]
+material = "glass"
+
+# Transparent sidebar — lets [window].material show through. Row text
+# and hovers still use the regular theme tokens.
+# border-right = "none" hides the 1px NSSplitView hairline divider
+# between sidebar and the card so the card appears to float freely
+# over the frosted window.
+
+[sidebar]
+border-right = "none"
+background = "#ffffff00"
+material = "glass"
+padding-right = 0.0
+
+[titlebar]
+foreground = "#52525B"
+
+[tab]
+radius      = 6
+foreground  = "#52525B"
+font-weight = 400
+
+[tab.active]
+background  = "rgba(255,255,255,0.9)"
+foreground  = "#18181B"
+shadow      = "0 1px 2px rgba(0,0,0,0.05)"
+font-weight = 700
+border = "1px solid #e5e5e5"
+
+[tab.hover]
+background = "rgba(0,0,0,0.04)"
+
+# The terminal viewport becomes a floating rounded card.
+#   - margin insets it from the window edges. The renderer reserves the
+#     titlebar height intrinsically so `top = 0` already lands flush with
+#     the titlebar bottom; left/right/bottom leave the sidebar and window
+#     edge visible so vibrancy wraps around the card.
+#   - padding shrinks the default 8pt grid gutter so the card hugs
+#     the text more tightly (the outer margin already provides
+#     breathing room)
+#   - radius + shadow + border ≈ Tailwind `rounded-lg border
+#     border-neutral-200 shadow-md`
+
+[container]
+background = "#F0E4C2"
+radius     = 15
+shadow     = "0 1.5px 6px rgba(0,0,0,0.18)"
+margin = [4, 16, 16, 16]
+padding = [8, 16, 8, 16]
+border = "1px solid #e5e5e5"
+
+# Layout overrides — no sidebar in tabs-top / tabs-bottom layouts, so the
+# card needs symmetric breathing room on every side instead of the
+# asymmetric "0 left because sidebar already pads it" inset used above.
+[container.tabs-top]
+margin = 12
+
+[container.tabs-bottom]
+margin = 12

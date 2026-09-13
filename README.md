@@ -58,19 +58,46 @@ What `setup.sh` does:
 ## Otty Setup (macOS)
 
 [Otty](https://otty.app) is the terminal this config is tuned for. `setup.sh`
-symlinks `otty/config.toml` into `~/.config/otty/config.toml` (backing up any
-existing file as `*.bak`), so Otty settings changes dirty this repo — commit
-them like `settings.json`.
+**copies** `otty/config.toml` to `~/.config/otty/config.toml` (backing up a
+differing existing file as `*.bak`).
+
+Unlike `settings.json`, this one is *not* symlinked and the flow is one-way
+(repo → machine). Otty rewrites its config from GUI state via temp-file +
+rename, which both replaces a symlink with a regular file and clobbers repo
+values (background, selection colour, `theme` case). So:
+
+- **Quit Otty before running `setup.sh`** — a running Otty overwrites the file
+  on quit. The script skips the copy and warns if Otty is running.
+- To change config, edit `otty/config.toml` in the repo and re-run `setup.sh`;
+  don't tune it in Otty's settings UI and expect it to persist here.
+- No restart needed to apply: `otty-cli config reload`
+  (`/Applications/Otty.app/Contents/MacOS/otty-cli`) hot-reloads a running Otty.
+  A newly added *theme file* may still need a restart, since Otty scans
+  `themes/` at launch. Useful checks: `otty-cli config show` (normalized
+  config), `otty-cli config get <key>` (effective value), `otty-cli theme list`
+  (confirms a user theme is installed).
 
 On a new machine:
 
-1. Install Otty and launch it once (creates `~/.config/otty/`).
-2. Run `./setup.sh` (or re-run it) to link the config.
+1. Install Otty and launch it once (creates `~/.config/otty/`), then quit it.
+2. Run `./setup.sh` (or re-run it) to copy the config.
 3. Install the font the config expects: **Maple Mono NF CN**
    (`brew install --cask font-maple-mono-nf-cn`) — otherwise Otty falls back
    to the default font.
-4. Restart Otty. Sanity-check: light background (paper), Nord dark theme,
-   floating-card window theme, tabs on top.
+4. Start Otty. Sanity-check: paper background (`#F0E4C2`), tabs on top, and a
+   paper-coloured card (not white).
+
+### Themes
+
+`otty/themes/*.ottytheme` are copied to `~/.config/otty/themes/` by `setup.sh`.
+`config.toml` sets `theme = "paper-card"`, which resolves to our own
+`paper-card.ottytheme` — the theme file must be installed or Otty falls back to
+a stock theme and the card renders white.
+
+Why a custom theme at all: the flat `background` key only colours the terminal
+grid. The visible card is `[container].background` (plus `[panel]`), which *only*
+a theme can set. `paper-card` is Otty's stock Floating Card with those
+backgrounds set to the paper colour.
 
 Not managed here: Otty's stock themes/fonts directories, and
 `extensions/otty-integration.ts` (Otty overwrites it on every "Install Pi
@@ -88,7 +115,7 @@ Integration" — see `.gitignore`; our own additions live in
 ├── models.json        # Custom model providers (seed copy; live file is machine-specific)
 ├── agents/            # Custom subagents (symlinked)
 ├── extensions/        # Custom extensions
-├── otty/              # Otty terminal config (config.toml symlinked to ~/.config/otty/)
+├── otty/              # Otty terminal config (config.toml copied to ~/.config/otty/)
 ├── prompts/           # Prompt templates
 ├── themes/            # Custom themes
 └── skills/            # Skills
