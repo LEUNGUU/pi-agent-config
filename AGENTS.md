@@ -77,8 +77,8 @@ Default to plain conversation — no pipelines, no gates. Scale ceremony with va
 
 Match model to task; don't burn frontier tokens on mechanical work. Prefer `kiro/*` models. (Kiro bills in credit multipliers; note gpt-5.6-sol at 2.40x is pricier than opus.)
 
-- **Cheap** (`kiro/minimax-m2.5` 0.25x, `kiro/claude-haiku-4.5` 0.40x, `kiro/glm-5` 0.50x): mechanical/maintenance work — renames, config tweaks, format fixes, bulk edits, log triage, summarization/rewriting. Default for fan-out subagents.
-- **Mid** (`kiro/claude-sonnet-5` 1.30x): standard implementation against an existing plan or established pattern.
+- **Cheap** (`kiro/gpt-5.6-luna` 0.10x, `kiro/minimax-m2.1` 0.15x, `kiro/minimax-m2.5` 0.25x, `kiro/claude-haiku-4.5` 0.40x, `kiro/glm-5` 0.50x): mechanical/maintenance work — renames, config tweaks, format fixes, bulk edits, log triage, summarization/rewriting, read-only investigation, and small scoped code changes. **Default for fan-out subagents: `kiro/gpt-5.6-luna`** (fall back to minimax-m2.1/m2.5 if luna misbehaves). Evaluated 2026-09 on code-trace, cross-file investigation, commit summarization, AND a real feature-with-tests write task: luna matched sonnet-5 with zero defects at ~1/13 the rate and fewest tokens; haiku burned 2.5x the tokens of minimax on the same investigation. Caveats: m2.1 writes correct code but failed gofmt (run gofmt after m2.1 write tasks); avoid `kiro/deepseek-3.2` for factual summaries (ordering errors).
+- **Mid** (`kiro/gpt-5.6-terra` 1.00x, `kiro/claude-sonnet-5` 1.30x): standard implementation against an existing plan or established pattern. On the write eval terra was the only model with a robustness nit (unguarded index) — prefer sonnet-5 for builder work; try luna first for small writes.
 - **Frontier** (`kiro/claude-opus-5` 2.20x, `kiro/gpt-5.6-sol` 2.40x): judgment work only — planning, architecture, first-task pattern-setting (prewalk), critique, user-facing prose.
 - **Prewalk (apply automatically, no need for the human to ask)**: when a build task has 3+ similar steps/nodes, spawn `builder-frontier` (opus) to implement the FIRST one and write pattern notes, then `builder` (sonnet) for the rest following that exemplar. Small tasks: just do them or spawn `builder` alone.
 
@@ -93,6 +93,7 @@ Spawn subagents with the built-in `Agent` tool (backed by the `@tintinweb/pi-sub
 - **`steer_subagent`** injects a message into a running agent to redirect it without restarting; the injected message and the agent's response are visible in the conversation viewer.
 - Run several in parallel as separate background `Agent` calls (the extension queues them, default concurrency 4).
 - Delegate only large, genuinely independent tracks of work (e.g. a wide multi-file investigation). Don't delegate what you can finish yourself in a handful of tool calls, and don't spawn subagents to verify or double-check your own work. If one subagent can do it, use one.
+- **The Agent tool's `isolation: "worktree"` is unreliable** (observed 2026-09: four "isolated" agents all ran in the main checkout and clobbered each other). For parallel write work, create worktrees manually (`git worktree add /tmp/wt-<name> <ref> --detach`) and hard-code the path in each agent's prompt ("Work ONLY inside /tmp/wt-x; cd there first"). Verify `git status` in the main checkout afterwards.
 - boo is **not** for subagents anymore — keep it for interactive terminal programs and long-lived/detachable sessions only (see the boo-terminal skill).
 
 ## Code Walkthroughs (伴读)
