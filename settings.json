@@ -24,7 +24,8 @@
       ]
     },
     "npm:@tintinweb/pi-subagents",
-    "git:https://github.com/badlogic/pi-diff-review"
+    "git:https://github.com/badlogic/pi-diff-review",
+    "git:github.com/DietrichGebert/ponytail"
   ],
   "tuiMode": "fullscreen"
 }
