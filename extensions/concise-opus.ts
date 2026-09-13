@@ -23,6 +23,7 @@
 // visibly, then is replaced on finalize.
 //
 // /concise toggles it (default ON) for turns where you want long-form output.
+import { complete } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 // Matches claude-opus-5, us.anthropic.claude-opus-5, opus-5.1, opus-4.8, etc.
@@ -46,7 +47,7 @@ const LIMIT = 100;
 // Rewrites are mechanical — use a cheaper/faster model than the Opus session
 // model. Override via env: PI_CONCISE_MODEL="provider/modelId". Falls back to
 // the session model if unavailable.
-const DEFAULT_REWRITER = "kiro/claude-haiku-4.5";
+const DEFAULT_REWRITER = "kiro/minimax-m2.5";
 
 /** Length of the prose part of a reply: CJK chars count 1 each, ASCII word = 1. */
 function proseLength(text: string): number {
@@ -89,7 +90,9 @@ export default function (pi: ExtensionAPI) {
 				const found = ctx.modelRegistry.find(spec.slice(0, slash), spec.slice(slash + 1));
 				if (found) model = found;
 			}
-			const response = await ctx.modelRegistry.complete(
+			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+			if (!auth.ok) throw new Error(auth.error);
+			const response = await complete(
 				model,
 				{
 					messages: [
@@ -100,7 +103,7 @@ export default function (pi: ExtensionAPI) {
 						},
 					],
 				},
-				{ maxTokens: 2048, signal: ctx.signal },
+				{ maxTokens: 2048, signal: ctx.signal, apiKey: auth.apiKey, headers: auth.headers },
 			);
 			const rewritten = response.content
 				.filter((b): b is { type: "text"; text: string } => b.type === "text")

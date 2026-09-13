@@ -25,11 +25,12 @@
 // /scope-guard toggles it (default ON — turn off for refactors where you
 // intentionally give the agent free rein).
 import { execSync } from "node:child_process";
+import { complete } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 // Cheap judge: the evaluation is a small classification task.
 // Override via env: PI_SCOPE_GUARD_MODEL="provider/modelId".
-const DEFAULT_JUDGE = "kiro/claude-haiku-4.5";
+const DEFAULT_JUDGE = "kiro/minimax-m2.5";
 
 // Enforcement rounds per task before giving up (prevents block/rewrite loops).
 const MAX_ROUNDS = 2;
@@ -82,7 +83,7 @@ export default function (pi: ExtensionAPI) {
 		if (typeof path === "string") touched.add(path);
 	});
 
-	pi.on("agent_settled", async (_event, ctx) => {
+	pi.on("agent_end", async (_event, ctx) => {
 		if (!enabled || !inRepo || touched.size === 0 || prompts.length === 0) return;
 		enforcing = false;
 
@@ -124,7 +125,9 @@ export default function (pi: ExtensionAPI) {
 
 		let verdict: { violations: { file: string; reason: string }[] };
 		try {
-			const response = await ctx.modelRegistry.complete(
+			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+			if (!auth.ok) throw new Error(auth.error);
+			const response = await complete(
 				model,
 				{
 					messages: [
@@ -147,7 +150,7 @@ export default function (pi: ExtensionAPI) {
 						},
 					],
 				},
-				{ maxTokens: 1024, signal: ctx.signal },
+				{ maxTokens: 1024, signal: ctx.signal, apiKey: auth.apiKey, headers: auth.headers },
 			);
 			const text = response.content
 				.filter((b): b is { type: "text"; text: string } => b.type === "text")
