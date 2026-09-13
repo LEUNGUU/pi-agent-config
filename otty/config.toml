@@ -1,3 +1,10 @@
+# Window/card theme. `paper-card` is our own theme (otty/themes/paper-card.ottytheme,
+# installed to ~/.config/otty/themes/ by setup.sh): Floating Card with the paper
+# background applied to [terminal], [panel] and [container]. The flat colour keys
+# below only reach the terminal grid — the card itself is [container].background,
+# which only a theme can set, which is why plain `background = ...` left it white.
+theme = "paper-card"
+
 theme-dark = "Nord"
 foreground = "#1a1b18"
 background = "#F0E4C2"
@@ -48,5 +55,3 @@ notification-foreground = "tab-unfocused"
 window-layout = "tabs-top"
 
 auto-hide-tab-bar = "auto"
-
-theme = "floating-card"

@@ -24,12 +24,33 @@ for f in settings.json AGENTS.md; do
     link "$REPO_DIR/$f" "$PI_DIR/$f"
 done
 
-# Otty terminal config (https://otty.app). Same symlink strategy: Otty writes
-# settings in place, so runtime tweaks land in the repo tree — commit them.
+# Otty terminal config (https://otty.app). NOT symlinked: Otty writes its
+# config via temp-file + rename, which replaces a symlink with a regular file,
+# and it rewrites the whole file from its GUI state (clobbering repo values
+# such as background/selection colours). So push the repo copy instead, and
+# only while Otty is closed — a running Otty overwrites it on quit.
 # Fonts and stock themes are not managed here (install fonts separately).
 if [[ -d "$HOME/.config" ]]; then
     mkdir -p "$HOME/.config/otty"
-    link "$REPO_DIR/otty/config.toml" "$HOME/.config/otty/config.toml"
+    otty_dst="$HOME/.config/otty/config.toml"
+    if pgrep -x otty >/dev/null 2>&1; then
+        echo "Warning: Otty is running — skipped config.toml (quit Otty, then re-run)"
+    else
+        if [[ -e "$otty_dst" ]] && ! cmp -s "$REPO_DIR/otty/config.toml" "$otty_dst"; then
+            cp -L "$otty_dst" "$otty_dst.bak" 2>/dev/null || true
+            echo "Backed up $otty_dst -> $otty_dst.bak"
+        fi
+        rm -f "$otty_dst"
+        cp "$REPO_DIR/otty/config.toml" "$otty_dst"
+        echo "Copied config.toml"
+        # Custom themes: config.toml's `theme = "paper-card"` resolves to a user
+        # theme file, so it must be installed or Otty silently falls back.
+        if [[ -d "$REPO_DIR/otty/themes" ]]; then
+            mkdir -p "$HOME/.config/otty/themes"
+            cp "$REPO_DIR/otty/themes/"*.ottytheme "$HOME/.config/otty/themes/"
+            echo "Copied Otty themes"
+        fi
+    fi
 fi
 
 # Subagents (discovered from ~/.pi/agent/agents/, not via packages)
