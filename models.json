@@ -120,6 +120,62 @@
       "api": "anthropic-messages",
       "models": [
         {
+          "id": "claude-sonnet-5.5",
+          "name": "Claude Sonnet 5.5 (Kiro)",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "cost": {
+            "input": 19.5,
+            "output": 19.5,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "claude-opus-5.5",
+          "name": "Claude Opus 5.5 (Kiro)",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "cost": {
+            "input": 30.0,
+            "output": 30.0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
           "id": "claude-opus-4.7",
           "name": "Claude Opus 4.7 (Kiro)",
           "reasoning": true,
@@ -317,8 +373,8 @@
             "image"
           ],
           "cost": {
-            "input": 5.5,
-            "output": 33,
+            "input": 66.0,
+            "output": 66.0,
             "cacheRead": 0,
             "cacheWrite": 0
           },
@@ -331,35 +387,6 @@
             "high": "high",
             "xhigh": "xhigh",
             "max": "max"
-          }
-        },
-        {
-          "id": "claude-fable-5",
-          "name": "Claude Fable 5 (Kiro)",
-          "reasoning": true,
-          "input": [
-            "text",
-            "image"
-          ],
-          "cost": {
-            "input": 19.5,
-            "output": 19.5,
-            "cacheRead": 0,
-            "cacheWrite": 0
-          },
-          "contextWindow": 200000,
-          "maxTokens": 64000,
-          "compat": {
-            "forceAdaptiveThinking": true
-          },
-          "thinkingLevelMap": {
-            "minimal": null,
-            "low": "low",
-            "medium": "medium",
-            "high": "high",
-            "xhigh": "xhigh",
-            "max": "max",
-            "off": null
           }
         },
         {
@@ -401,8 +428,8 @@
           "contextWindow": 272000,
           "maxTokens": 128000,
           "cost": {
-            "input": 15.0,
-            "output": 15.0,
+            "input": 33.0,
+            "output": 33.0,
             "cacheRead": 0,
             "cacheWrite": 0
           }
@@ -418,8 +445,8 @@
           "contextWindow": 272000,
           "maxTokens": 128000,
           "cost": {
-            "input": 1.5,
-            "output": 1.5,
+            "input": 9.0,
+            "output": 9.0,
             "cacheRead": 0,
             "cacheWrite": 0
           }
