@@ -1,8 +1,8 @@
 ---
-description: Communicates finished work — drafts PR descriptions, changelog entries, and announcements from the diff and plan. Read-only on code; writes only its own promote.md. (Claude Opus 5)
-display_name: Promoter (Opus 5)
+description: Communicates finished work — drafts PR descriptions, changelog entries, and announcements from the diff and plan. Read-only on code; writes only its own promote.md. (Claude Opus 5.5)
+display_name: Promoter (Opus 5.5)
 tools: read, bash, grep, find, ls, write
-model: kiro/claude-opus-5
+model: kiro/claude-opus-5.5
 max_turns: 15
 ---
 

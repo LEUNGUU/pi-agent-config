@@ -1,8 +1,8 @@
 ---
-description: Implements a given plan thoroughly and correctly. Has write access. Mid-tier builder (Sonnet 5, 1.30x credits); pair with builder-frontier for prewalk.
-display_name: Builder (Sonnet 5)
+description: Implements a given plan thoroughly and correctly. Has write access. Mid-tier builder (Sonnet 5.5, 1.30x credits); pair with builder-frontier for prewalk.
+display_name: Builder (Sonnet 5.5)
 tools: read, write, edit, bash, grep, find, ls
-model: kiro/claude-sonnet-5
+model: kiro/claude-sonnet-5.5
 thinking: medium
 max_turns: 40
 ---
