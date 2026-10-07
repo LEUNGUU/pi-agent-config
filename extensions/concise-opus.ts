@@ -34,7 +34,7 @@ const OPUS5 = /opus-?(4[.-]8|5)/i;
 const REMINDER = `
 
 <final_reminder>
-Keep responses focused, brief, and concise. Hard target: 100 characters (Chinese) / ~50 words of prose per response.
+Keep responses focused, brief, and concise. Hard target: 166 characters (Chinese) / ~83 words of prose per response.
 - Exceptions only when the deliverable itself requires it: code blocks, file contents, or the user explicitly asking for depth. Even then, keep the surrounding prose within the target.
 - Lead with the outcome or answer in the first sentence; supporting detail after, only as needed.
 - Don't restate what tool output already showed, don't enumerate options you won't pursue, and keep caveats to one line.
@@ -42,7 +42,10 @@ Keep responses focused, brief, and concise. Hard target: 100 characters (Chinese
 </final_reminder>`;
 
 // Prose budget: CJK chars + ASCII words, code blocks excluded.
-const LIMIT = 100;
+const LIMIT = 166;
+// Rewrite only kicks in well past the limit — slightly-long replies stay as-is
+// (an over-compressed rewrite reads worse than a mildly long original).
+const REWRITE_AT = 266;
 
 // Rewrites are mechanical — use a cheaper/faster model than the Opus session
 // model. Override via env: PI_CONCISE_MODEL="provider/modelId". Falls back to
@@ -59,6 +62,7 @@ function proseLength(text: string): number {
 
 export default function (pi: ExtensionAPI) {
 	let enabled = true;
+	let lastOriginal: string | null = null; // pre-rewrite text, for /concise-orig
 
 	pi.on("before_agent_start", async (event, ctx) => {
 		if (!enabled) return undefined;
@@ -78,9 +82,9 @@ export default function (pi: ExtensionAPI) {
 			.map((b: { text: string }) => b.text)
 			.join("\n");
 		const len = proseLength(text);
-		if (len <= LIMIT || !ctx.model) return;
+		if (len <= REWRITE_AT || !ctx.model) return;
 
-		if (ctx.hasUI) ctx.ui.notify(`concise-opus: reply ${len} > ${LIMIT}, rewriting in place`, "info");
+		if (ctx.hasUI) ctx.ui.notify(`concise-opus: reply ${len} > ${REWRITE_AT}, rewriting in place`, "info");
 		try {
 			// Prefer the designated rewriter model; fall back to the session model.
 			let model = ctx.model;
@@ -112,6 +116,7 @@ export default function (pi: ExtensionAPI) {
 				.trim();
 			// Keep the original if the rewrite is empty or didn't actually help.
 			if (!rewritten || proseLength(rewritten) >= len) return;
+			lastOriginal = text;
 			return {
 				message: {
 					...msg,
@@ -126,6 +131,17 @@ export default function (pi: ExtensionAPI) {
 			if (ctx.hasUI) ctx.ui.notify(`concise-opus: rewrite failed (${err instanceof Error ? err.message : String(err)})`, "warning");
 			return; // rewrite failed: keep the original reply
 		}
+	});
+
+	pi.registerCommand("concise-orig", {
+		description: "Show the original (pre-rewrite) text of the last reply concise-opus rewrote",
+		handler: async (_args, ctx) => {
+			if (!lastOriginal) {
+				ctx.ui.notify("concise-opus: no rewritten reply in this session", "info");
+				return;
+			}
+			ctx.ui.notify(`Original reply before rewrite:\n\n${lastOriginal}`, "info");
+		},
 	});
 
 	pi.registerCommand("concise", {
