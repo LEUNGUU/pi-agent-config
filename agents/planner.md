@@ -1,8 +1,8 @@
 ---
 description: Architecture and implementation planning — produces phased, file-level plans. Writes only its own plan.md.
-display_name: Planner (Opus 5)
+display_name: Planner (Opus 5.5)
 tools: read, write, grep, find, ls
-model: kiro/claude-opus-5
+model: kiro/claude-opus-5.5
 thinking: medium
 max_turns: 20
 ---
