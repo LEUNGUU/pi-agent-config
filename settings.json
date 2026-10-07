@@ -1,6 +1,7 @@
 {
-  "lastChangelogVersion": "0.85.1",
+  "lastChangelogVersion": "0.87.0",
   "defaultThinkingLevel": "high",
+  "cacheWarming": "streaming",
   "defaultProvider": "kiro",
   "defaultModel": "claude-opus-5",
   "enabledModels": [
@@ -25,7 +26,9 @@
     },
     "npm:@tintinweb/pi-subagents",
     "git:https://github.com/badlogic/pi-diff-review",
-    "git:github.com/DietrichGebert/ponytail"
+    "git:github.com/DietrichGebert/ponytail",
+    "https://github.com/earendil-works/pi-transcribe",
+    "npm:@juicesharp/rpiv-ask-user-question"
   ],
   "tuiMode": "fullscreen"
 }
