@@ -1,8 +1,8 @@
 ---
-description: Frontier builder — implements the first/hardest piece of a multi-step task to set the pattern (file layout, naming, tests) that a cheaper builder then follows for the rest. Has write access. Use for prewalk; for the follow-on work spawn `builder`. (Claude Opus 5)
-display_name: Builder Frontier (Opus 5)
+description: Frontier builder — implements the first/hardest piece of a multi-step task to set the pattern (file layout, naming, tests) that a cheaper builder then follows for the rest. Has write access. Use for prewalk; for the follow-on work spawn `builder`. (Claude Opus 5.5)
+display_name: Builder Frontier (Opus 5.5)
 tools: read, write, edit, bash, grep, find, ls
-model: kiro/claude-opus-5
+model: kiro/claude-opus-5.5
 thinking: medium
 max_turns: 40
 ---
