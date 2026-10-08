@@ -1,12 +1,11 @@
 /**
- * Hindsight MCP bridge for pi.
+ * Hindsight memory integration for pi.
  *
- * pi has no native MCP support, so this extension connects to the self-hosted
- * Hindsight memory server over its native HTTP MCP transport, discovers its
- * tools, and re-registers each one as a native pi tool (prefixed `hs_`). The
- * LLM then calls them like any other pi tool; calls are forwarded over MCP.
+ * Registers the self-hosted Hindsight MCP server through pi's built-in MCP
+ * support (tools appear as `mcp__hindsight__<tool>`), and streams this session
+ * (user prompts, assistant responses) into Hindsight's retain endpoint so its
+ * learning pipeline can extract facts automatically.
  *
- * Hindsight runs on a self-hosted box reached over its HTTP MCP transport.
  * The host:port is read from HINDSIGHT_HOST (default localhost:8888) so the
  * real endpoint stays out of source control — set it in your environment,
  * or run an SSH tunnel and leave the default:
@@ -17,9 +16,6 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { Type } from "typebox";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
@@ -33,13 +29,17 @@ const MCP_URL = `http://${HINDSIGHT_HOST}/mcp/pi/`;
 /** Hindsight REST base for the same bank — used by the session-capture hooks. */
 const RETAIN_URL = `http://${HINDSIGHT_HOST}/v1/default/banks/pi/memories`;
 
+/**
+ * Models barred from Hindsight. Kiro's Fable models are flagged upstream as
+ * "[Internal] DEVELOPMENT USE CASES ONLY, NOT FOR CUSTOMER DATA, ITAR OR PII",
+ * so neither the memory tools nor session capture should run under them —
+ * capture matters more than the tools, since it ships prompts and replies to
+ * the memory store without the model asking.
+ */
+const BLOCKED_MODEL = /fable/i;
+
 // ---------------------------------------------------------------------------
 // Session capture
-//
-// Streams this pi session (user prompts, assistant responses) into Hindsight
-// via its retain endpoint. Hindsight's LLM then extracts facts, entities, and
-// relationships automatically (its "learning" pipeline) — this is what gives
-// recall/reflect material beyond manual hs_retain calls.
 //
 // Fire-and-forget: a down tunnel or service must never block or break the
 // user's session. async:true so retain returns immediately and Hindsight
@@ -110,119 +110,46 @@ function lastAssistantText(messages: unknown): string {
 	return "";
 }
 
-let client: Client | undefined;
-let connecting: Promise<Client> | undefined;
-
-async function getClient(): Promise<Client> {
-	if (client) return client;
-	if (connecting) return connecting;
-
-	connecting = (async () => {
-		const transport = new StreamableHTTPClientTransport(new URL(MCP_URL));
-		const c = new Client(
-			{ name: "pi-hindsight-bridge", version: "0.1.0" },
-			{ capabilities: {} },
-		);
-		await c.connect(transport);
-		client = c;
-		return c;
-	})();
-
-	return connecting;
-}
-
 export default function hindsightMcp(pi: ExtensionAPI) {
-	const registered = new Set<string>();
-
-	const wire = async (ctx: {
-		ui: { notify: (m: string, l: "error" | "info" | "warning") => void };
-	}) => {
-		let c: Client;
-		try {
-			c = await getClient();
-		} catch (err) {
-			ctx.ui.notify(`Hindsight: failed to connect (tunnel up?): ${String(err)}`, "error");
-			return;
-		}
-
-		const { tools } = await c.listTools();
-		let count = 0;
-		for (const tool of tools) {
-			const name = `hs_${tool.name}`;
-			if (registered.has(name)) continue;
-			registered.add(name);
-			count++;
-
-			pi.registerTool({
-				name,
-				label: `Hindsight: ${tool.name}`,
-				description: tool.description ?? `Hindsight MCP tool: ${tool.name}`,
-				parameters: (tool.inputSchema as unknown as ReturnType<typeof Type.Object>) ??
-					Type.Object({}),
-				async execute(_toolCallId, params, signal) {
-					const result = await c.callTool(
-						{
-							name: tool.name,
-							arguments: params as Record<string, unknown>,
-						},
-						undefined,
-						signal ? { signal } : undefined,
-					);
-					const content = (result.content as Array<{ type: string; text?: string }>) ?? [];
-					const text = content
-						.map((b) => (b.type === "text" ? (b.text ?? "") : `[${b.type}]`))
-						.join("\n");
-					return {
-						content: [{ type: "text", text: text || "(no output)" }],
-						details: { tool: tool.name, isError: result.isError ?? false },
-					};
-				},
-			});
-		}
-		ctx.ui.notify(`Hindsight: registered ${count} tool(s)`, "info");
-	};
-
-	pi.on("session_start", async (_event, ctx) => {
-		await wire(ctx);
+	// Built-in MCP connects this on session start; reconnect/inspect via /mcp.
+	// recall/retain/reflect are small and frequent: declared directly. The
+	// list_* enumerators return up to 100 items; `codemode` forces the model to
+	// filter them in a script instead of dumping the JSON into context.
+	// delete_*/clear_* are irreversible bulk operations: hidden; run them from
+	// the Hindsight UI/API instead of via the model.
+	pi.registerMcpServer("hindsight", {
+		url: MCP_URL,
+		exposure: "direct",
+		toolExposure: { "list_*": "codemode", "delete_*": "hidden", "clear_*": "hidden" },
+		description: "Long-term memory: recall, reflect, retain facts and preferences across sessions",
 	});
 
-	// Close the MCP connection when the session ends (quit/reload), so we don't
-	// leak a dangling client + transport. wire() rebuilds it on the next start.
-	pi.on("session_shutdown", async () => {
-		try {
-			await client?.close();
-		} catch {
-			// ignore
-		}
-		client = undefined;
-		connecting = undefined;
-		registered.clear();
+	// Set per turn from before_agent_start; agent_end capture reads it too.
+	let blocked = false;
+
+	// --- Fable guard: no memory tools, no capture, under a blocked model ---
+
+	pi.on("tool_call", async (event, ctx) => {
+		if (!event.toolName.startsWith("mcp__hindsight__")) return;
+		if (!BLOCKED_MODEL.test(ctx.model?.id ?? "")) return;
+		return {
+			block: true,
+			reason: `Hindsight is disabled under ${ctx.model?.id} (internal-use model: no customer data, ITAR or PII).`,
+		};
 	});
 
 	// --- Session capture: stream prompts + responses into Hindsight ---
 
-	pi.on("before_agent_start", async (event, _ctx) => {
+	pi.on("before_agent_start", async (event, ctx) => {
+		blocked = BLOCKED_MODEL.test(ctx.model?.id ?? "");
+		if (blocked) return;
 		const prompt = (event as { prompt?: string }).prompt;
 		if (prompt) retain(`User: ${prompt}`);
 	});
 
 	pi.on("agent_end", async (event, _ctx) => {
+		if (blocked) return;
 		const text = lastAssistantText((event as { messages?: unknown }).messages);
 		if (text) retain(`Assistant: ${text}`);
-	});
-
-	pi.registerCommand("hindsight-reconnect", {
-		description: "Reconnect to the Hindsight MCP server and re-register its tools",
-		handler: async (_args, ctx) => {
-			try {
-				await client?.close();
-			} catch {
-				// ignore
-			}
-			client = undefined;
-			connecting = undefined;
-			registered.clear();
-			await wire(ctx);
-		},
 	});
 }

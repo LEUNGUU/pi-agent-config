@@ -148,6 +148,34 @@
           }
         },
         {
+          "id": "claude-fable-5.1",
+          "name": "Claude Fable 5.1 (Kiro)",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "cost": {
+            "input": 90.0,
+            "output": 90.0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "contextWindow": 400000,
+          "maxTokens": 128000,
+          "compat": {
+            "forceAdaptiveThinking": true
+          },
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
           "id": "claude-opus-5.5",
           "name": "Claude Opus 5.5 (Kiro)",
           "reasoning": true,
