@@ -29,9 +29,5 @@
     "npm:@juicesharp/rpiv-ask-user-question",
     "https://github.com/ayghri/i-have-adhd"
   ],
-  "tuiMode": "fullscreen",
-  "hideThinkingBlock": false,
-  "images": {
-    "blockImages": false
-  }
+  "tuiMode": "fullscreen"
 }
