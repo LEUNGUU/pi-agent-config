@@ -26,7 +26,12 @@
     "git:https://github.com/badlogic/pi-diff-review",
     "git:github.com/DietrichGebert/ponytail",
     "https://github.com/earendil-works/pi-transcribe",
-    "npm:@juicesharp/rpiv-ask-user-question"
+    "npm:@juicesharp/rpiv-ask-user-question",
+    "https://github.com/ayghri/i-have-adhd"
   ],
-  "tuiMode": "fullscreen"
+  "tuiMode": "fullscreen",
+  "hideThinkingBlock": false,
+  "images": {
+    "blockImages": false
+  }
 }
