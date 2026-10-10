@@ -22,16 +22,19 @@ Use **uv** (`/usr/local/bin/uv`) for Python versions and venvs. Do NOT use syste
 
 ## Web Access
 
-**Default to Tavily first** for any networked task — the account has paid credits, so use it freely. A `402 Payment Required` from Tavily means the credits ran out; tell the user, then fall back.
+Tavily first (paid credits). A `402` means credits ran out: tell the user, then fall back.
 
-- **Deep research / 调研 / write a report** (multi-source synthesis with citations): use `tvly research` (default `--model auto`; `--model mini` when a quick pass is enough). Slow (minutes) but thorough; the user prefers it over Exa's `agent_run` for research.
-- **Search the web** (discover URLs / info from a query): use `tavily-search` first. On a rate-limit or network error (e.g. 429), fall back to `brave-search`. Don't switch back and forth within one task. For a pinpoint technical lookup (a specific GitHub issue, release tag, doc page) Exa via agent-reach (`mcporter call exa.web_search_exa`) is more precise and may be used directly.
-- **Platform-specific content** (YouTube, Bilibili, GitHub, V2EX, RSS, and the login-backed platforms): use the `agent-reach` skill, which routes to the installed upstream CLI. Note: `agent-reach doctor` and Exa need `EXA_API_KEY` in the environment (`~/.env.zsh`, only sourced by interactive zsh — start pi from a zsh terminal).
-- **Read a known URL**: use `tavily-extract` first — LLM-optimized markdown, handles JS-rendered pages. Fall back to `web-access` (`curl` / `r.jina.ai`, or the CDP browser) for login-walled or anti-scraping pages (小红书/微信/Twitter etc.) where Tavily fails.
-- **Interactive / logged-in / JS-heavy** (click, fill, screenshot, scrape dynamic content, "the page I was just looking at"): use `web-access` — Tavily can't drive a browser.
-- **Escalate, don't blindly retry**: search → extract → browser. If a layer fails, move up the chain — a search miss may mean the target doesn't exist, not "try again."
+| Task | Use | Fallback |
+|---|---|---|
+| Deep research / report | `tvly research` (`--model mini` for a quick pass) | — |
+| Web search | `tavily-search` | `brave-search` on 429 / network error. Pinpoint lookups (GitHub issue, release tag, doc page): Exa via `mcporter call exa.web_search_exa` |
+| Read a known URL | `tavily-extract` | `web-access` for login-walled / anti-scraping pages |
+| YouTube, Bilibili, GitHub, V2EX, RSS, login platforms | `agent-reach` | — |
+| Click, fill, screenshot, logged-in pages | `web-access` (CDP browser) | — |
 
-For browser-based `web-access` (CDP), Chrome and the proxy are on-demand. Run `skills/web-access/scripts/check-deps.mjs` first; if Chrome isn't connected, start it with the copied profile (Chrome 136+ refuses remote debugging on the default profile), then the proxy:
+This table overrides agent-reach's "MUST USE for any research": use it only for the platforms above. It and Exa need `EXA_API_KEY` from `~/.env.zsh`, so start pi from zsh. If a layer fails, escalate (search → extract → browser) instead of retrying.
+
+CDP Chrome is on-demand: run `skills/web-access/scripts/check-deps.mjs`; if not connected, start Chrome with the copied profile (Chrome 136+ refuses remote debugging on the default one), then the proxy:
 
 ```bash
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
@@ -45,19 +48,19 @@ Default to plain conversation — no pipelines, no gates. Scale ceremony with va
 
 - **Clear, scoped task**: just do it.
 - **Vague or large task**: discuss first ("give me options") or write a plan to `PLAN.md` / `spec.md` — a visible, editable file the human can touch, not a state machine. Get a nod, then execute in the same conversation.
-- **Subagents are for read-only fan-out** (investigation, research, triage, parallel critics) — not for role-separated build pipelines. For build work, stay in the main context.
+- **Subagents**: read-only fan-out (investigation, research, triage, parallel critics), plus prewalk for repetitive build work (see Model Cost Tiers). Other build work stays in the main context.
 - **Verification over review**: prefer tests, typecheck, lint, and diff inspection as the quality gate. Spawn a critic only for high-stakes changes.
 - **Harness engineering**: when the human corrects a recurring mistake, propose adding a line here or a check script so it can't recur.
 
 ## Model Cost Tiers
 
-Match model to task; don't burn frontier tokens on mechanical work. Prefer `kiro/*` models. (Kiro bills in credit multipliers; rates move — re-check with `kiro-cli chat --list-models` before relying on a number here. Last synced 2026-09-13.)
+When spawning a subagent or workflow agent, set `model` to the cheapest tier that fits. Every agent type (`agents/*.md`, including the overrides of the built-in general-purpose / Plan / Explore) pins a default, so unset is already cheap; set `model` only to go up a tier for a harder task. Spawning on a Fable model triggers a confirm dialog (`permission-gate.ts`).
 
-- **Cheap** (`kiro/minimax-m2.1` 0.15x, `kiro/minimax-m2.5` 0.25x, `kiro/deepseek-3.2` 0.25x, `kiro/claude-haiku-4.5` 0.40x, `kiro/glm-5` 0.50x, `kiro/gpt-5.6-luna` 0.60x): mechanical/maintenance work — renames, config tweaks, format fixes, bulk edits, log triage, summarization/rewriting, read-only investigation, and small scoped code changes. **Default for fan-out subagents: `kiro/minimax-m2.1`**; reach for `gpt-5.6-luna` when the task needs the 1M window or image input (m2.x and glm are 196K/200K, text-only). Evaluated 2026-09 on code-trace, cross-file investigation, commit summarization, AND a real feature-with-tests write task: luna and m2.1 both matched sonnet-5 with zero logic defects at a fraction of the rate. Caveats: m2.1 writes correct code but failed gofmt (run gofmt after m2.1 write tasks); avoid `kiro/deepseek-3.2` for factual summaries (ordering errors).
-- **Mid** (`kiro/claude-sonnet-5` 1.30x, `kiro/claude-sonnet-5.5` 1.30x): standard implementation against an existing plan or established pattern. Prefer sonnet-5.5 (newer at the same rate). On the write eval terra was the only model with a robustness nit (unguarded index), and it has since risen to 2.20x — no longer a mid-tier option.
-- **Frontier** (`kiro/claude-opus-5.5` 2.00x, `kiro/claude-opus-5` 2.20x, `kiro/gpt-5.6-terra` 2.20x, `kiro/gpt-5.6-sol` 4.40x): judgment work only — planning, architecture, first-task pattern-setting (prewalk), critique, user-facing prose. opus-5.5 is the cheapest frontier option; sol at 4.40x is the most expensive general-use model.
-- **Restricted** (`kiro/claude-fable-5.1` 6.00x): internal development use only — never for customer data, ITAR, or PII. Most expensive model on the platform; use only when explicitly asked.
-- **Prewalk (apply automatically, no need for the human to ask)**: when a build task has 3+ similar steps/nodes, spawn `builder-frontier` (opus) to implement the FIRST one and write pattern notes, then `builder` (sonnet) for the rest following that exemplar. Small tasks: just do them or spawn `builder` alone.
+- Cheap: mechanical work, read-only investigation, small scoped changes. Default `kiro/minimax-m2.1`; `kiro/gpt-5.6-luna` for a 1M window or images. Run gofmt after m2.1 writes; don't use `kiro/deepseek-3.2` for factual summaries.
+- Mid: `kiro/claude-sonnet-5.5`, for implementation against a plan or existing pattern.
+- Frontier: `kiro/claude-opus-5.5`, for planning, architecture, critique, user-facing prose.
+- Restricted: `kiro/claude-fable-5.1`, only when explicitly asked; never customer data, ITAR or PII.
+- Prewalk (automatic, no need to ask): a build task with 3+ similar steps gets `builder-frontier` for the first one plus pattern notes, then `builder` for the rest. Smaller build tasks: do them yourself.
 
 ## Subagents — use the `Agent` tool (DEFAULT)
 
