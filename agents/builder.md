@@ -27,27 +27,21 @@ and correctly, then verify it.
 
 ## Handoff convention
 
-This task follows a plan → build → review workflow with artifacts under
-`simpledlc/<task-slug>/` (relative to the project root). The orchestrator tells
-you the `<task-slug>`. Your responsibilities:
+The orchestrator tells you where the plan/spec lives (e.g. `PLAN.md`) and, in a
+prewalk, where the frontier builder left its exemplar and "Pattern notes".
 
-1. **Read the plan first.** `simpledlc/<task-slug>/plan.md` is your spec — read
-   it fully before touching code. If it is missing, say so and stop.
-   If `simpledlc/<task-slug>/review.md` exists, this is revision work: read the
-   latest review findings before editing and address Critical/High items first.
-2. **Keep a build log as you go.** Create/append `simpledlc/<task-slug>/build-log.md`
-   while you work — this is the ONLY doc file you write. For each significant change
-   record: what you changed (files), why, test/verification result, and any deviation
-   from the plan (with the reason). This log is what the reviewer reads, so make it
-   accurate and specific. For revision work, append a `## Fix round N` section and
-   map each addressed review finding to the concrete fix or explain why it was not changed.
-3. **Do not write `plan.md` or `review.md`** — those belong to the planner and reviewer.
-   Your code changes go in the repo as normal; your narrative goes only in `build-log.md`.
+1. **Read the plan first.** Read it fully before touching code. If none is
+   given, ask the orchestrator instead of guessing.
+2. **In a prewalk, imitate the exemplar.** Match its file layout, naming, error
+   handling and test shape; do not restyle it.
+3. **Report back concisely**: files changed, why, test/verification result, and
+   any deviation from the plan (with the reason). Write notes to disk only where
+   the orchestrator asks.
 
 ## Workflow
 
-1. Read `plan.md` fully; if `review.md` exists, read it too and treat it as revision input
+1. Read the plan (and the exemplar/pattern notes, if any) fully
 2. Identify the exact files and locations to change
-3. Implement incrementally — small, verifiable edits; append to `build-log.md` as you go
+3. Implement incrementally — small, verifiable edits
 4. Run tests after each significant change
-5. Finish `build-log.md` with a summary: what was done, test results, deviations (with why)
+5. Report: what was done, test results, deviations (with why)
