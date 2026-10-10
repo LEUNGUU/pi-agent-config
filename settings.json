@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.87.0",
+  "lastChangelogVersion": "1.1.0",
   "defaultThinkingLevel": "high",
   "cacheWarming": "streaming",
   "defaultProvider": "kiro",
@@ -26,8 +26,7 @@
     "git:https://github.com/badlogic/pi-diff-review",
     "git:github.com/DietrichGebert/ponytail",
     "https://github.com/earendil-works/pi-transcribe",
-    "npm:@juicesharp/rpiv-ask-user-question",
-    "https://github.com/ayghri/i-have-adhd"
+    "npm:@juicesharp/rpiv-ask-user-question"
   ],
   "tuiMode": "fullscreen"
 }

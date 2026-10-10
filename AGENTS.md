@@ -24,8 +24,7 @@ terraform version constraints, git rules, and pointers to per-topic docs.
 
 ## Git & Secrets
 
-- Before any commit, make sure no secret is exposed. Scan the staged diff (`git diff --cached`) for API keys, tokens, passwords, private keys, and `.env`-style values. If anything looks like a credential, stop and ask before committing.
-- Never stage files that typically hold secrets (`.env`, `*.pem`, `*_token`, credential/key files) unless the user explicitly says to. Stage specific files rather than `git add .`.
+- Commits are secret-scanned by `githooks/pre-commit` (gitleaks; `setup.sh` installs it into `.git/hooks`). A blocked commit means a real finding: fix it, don't `--no-verify` without asking.
 - Keep real secrets out of code and config — reference them via environment variables (e.g. `$AGNES_API_KEY`) or a `!cat ~/path` indirection, never inline literals.
 
 ## Python Environment
@@ -40,9 +39,11 @@ Use **uv** (`/usr/local/bin/uv`) for Python versions and venvs. Do NOT use syste
 
 ## Web Access
 
-**Default to Tavily first** for any networked task — the account has paid credits, so use it freely.
+**Default to Tavily first** for any networked task — the account has paid credits, so use it freely. A `402 Payment Required` from Tavily means the credits ran out; tell the user, then fall back.
 
-- **Search the web** (discover URLs / info from a query): use `tavily-search` first. On a rate-limit or network error (e.g. 429), fall back to `brave-search`. Don't switch back and forth within one task.
+- **Deep research / 调研 / write a report** (multi-source synthesis with citations): use `tvly research` (default `--model auto`; `--model mini` when a quick pass is enough). Slow (minutes) but thorough; the user prefers it over Exa's `agent_run` for research.
+- **Search the web** (discover URLs / info from a query): use `tavily-search` first. On a rate-limit or network error (e.g. 429), fall back to `brave-search`. Don't switch back and forth within one task. For a pinpoint technical lookup (a specific GitHub issue, release tag, doc page) Exa via agent-reach (`mcporter call exa.web_search_exa`) is more precise and may be used directly.
+- **Platform-specific content** (YouTube, Bilibili, GitHub, V2EX, RSS, and the login-backed platforms): use the `agent-reach` skill, which routes to the installed upstream CLI. Note: `agent-reach doctor` and Exa need `EXA_API_KEY` in the environment (`~/.env.zsh`, only sourced by interactive zsh — start pi from a zsh terminal).
 - **Read a known URL**: use `tavily-extract` first — LLM-optimized markdown, handles JS-rendered pages. Fall back to `web-access` (`curl` / `r.jina.ai`, or the CDP browser) for login-walled or anti-scraping pages (小红书/微信/Twitter etc.) where Tavily fails.
 - **Interactive / logged-in / JS-heavy** (click, fill, screenshot, scrape dynamic content, "the page I was just looking at"): use `web-access` — Tavily can't drive a browser.
 - **Escalate, don't blindly retry**: search → extract → browser. If a layer fails, move up the chain — a search miss may mean the target doesn't exist, not "try again."
@@ -79,7 +80,8 @@ Match model to task; don't burn frontier tokens on mechanical work. Prefer `kiro
 
 - **Cheap** (`kiro/minimax-m2.1` 0.15x, `kiro/minimax-m2.5` 0.25x, `kiro/deepseek-3.2` 0.25x, `kiro/claude-haiku-4.5` 0.40x, `kiro/glm-5` 0.50x, `kiro/gpt-5.6-luna` 0.60x): mechanical/maintenance work — renames, config tweaks, format fixes, bulk edits, log triage, summarization/rewriting, read-only investigation, and small scoped code changes. **Default for fan-out subagents: `kiro/minimax-m2.1`**; reach for `gpt-5.6-luna` when the task needs the 1M window or image input (m2.x and glm are 196K/200K, text-only). Evaluated 2026-09 on code-trace, cross-file investigation, commit summarization, AND a real feature-with-tests write task: luna and m2.1 both matched sonnet-5 with zero logic defects at a fraction of the rate. Caveats: m2.1 writes correct code but failed gofmt (run gofmt after m2.1 write tasks); avoid `kiro/deepseek-3.2` for factual summaries (ordering errors).
 - **Mid** (`kiro/claude-sonnet-5` 1.30x, `kiro/claude-sonnet-5.5` 1.30x): standard implementation against an existing plan or established pattern. Prefer sonnet-5.5 (newer at the same rate). On the write eval terra was the only model with a robustness nit (unguarded index), and it has since risen to 2.20x — no longer a mid-tier option.
-- **Frontier** (`kiro/claude-opus-5.5` 2.00x, `kiro/claude-opus-5` 2.20x, `kiro/gpt-5.6-terra` 2.20x, `kiro/gpt-5.6-sol` 4.40x): judgment work only — planning, architecture, first-task pattern-setting (prewalk), critique, user-facing prose. opus-5.5 is the cheapest frontier option; sol at 4.40x is the most expensive model on the platform.
+- **Frontier** (`kiro/claude-opus-5.5` 2.00x, `kiro/claude-opus-5` 2.20x, `kiro/gpt-5.6-terra` 2.20x, `kiro/gpt-5.6-sol` 4.40x): judgment work only — planning, architecture, first-task pattern-setting (prewalk), critique, user-facing prose. opus-5.5 is the cheapest frontier option; sol at 4.40x is the most expensive general-use model.
+- **Restricted** (`kiro/claude-fable-5.1` 6.00x): internal development use only — never for customer data, ITAR, or PII. Most expensive model on the platform; use only when explicitly asked.
 - **Prewalk (apply automatically, no need for the human to ask)**: when a build task has 3+ similar steps/nodes, spawn `builder-frontier` (opus) to implement the FIRST one and write pattern notes, then `builder` (sonnet) for the rest following that exemplar. Small tasks: just do them or spawn `builder` alone.
 
 ## Subagents — use the `Agent` tool (DEFAULT)
