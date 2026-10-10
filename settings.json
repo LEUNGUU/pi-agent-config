@@ -18,8 +18,7 @@
       "source": "../../development/github.com/LEUNGUU/pi-agent-config",
       "extensions": [
         "extensions/*.ts",
-        "+extensions/hindsight-mcp/index.ts",
-        "!extensions/simpledlc.ts"
+        "+extensions/hindsight-mcp/index.ts"
       ]
     },
     "npm:@tintinweb/pi-subagents",
