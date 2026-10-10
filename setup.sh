@@ -96,6 +96,13 @@ else
     echo "Warning: pi not found. Install pi and run: pi install $REPO_DIR"
 fi
 
+# Secret-scanning pre-commit hook (this repo is public). Symlinked into
+# .git/hooks, not core.hooksPath: Code Defender owns core.hooksPath on corp
+# machines and chains to .git/hooks/pre-commit from there.
+ln -sf ../../githooks/pre-commit "$REPO_DIR/.git/hooks/pre-commit"
+command -v gitleaks >/dev/null 2>&1 \
+    || echo "Warning: gitleaks not found; commits will be refused until it is installed (brew install gitleaks)."
+
 echo "Done. Config linked into $PI_DIR"
 echo "Remaining manual steps on a new machine:"
 echo "  - ~/.pi/agent/auth.json (credentials are never in this repo)"
