@@ -1,30 +1,13 @@
 # Global Guidelines
 
-## Repo Overview
-
-If an `ONBOARDING.md` file exists at the repo root, read it first for a code-derived overview before exploring.
-
-If a `TERRAFORM_NOTES.md` file exists at the repo root (e.g. the `AWS_Accounts` /
-`AWS_Accounts-crm` worktrees), read it first — it holds that estate's layer layout,
-terraform version constraints, git rules, and pointers to per-topic docs.
-
 ## Conversational Style
 
-- Keep answers short, concise, and technical. No fluff, no cheerful filler, no emojis in commits, issues, PR comments, or code.
-- When the user asks a question, answer it first — before making edits or running implementation commands.
-- When responding to user feedback or an analysis, explicitly say whether you agree or disagree before saying what you changed. Don't agree by default; if something is wrong, say so and why.
-
-## Code Quality
-
-- Read files in full before wide-ranging changes, before editing files you have not fully inspected, and when asked to investigate or audit. Don't rely on search snippets for broad changes — agentic search has low recall in large repos.
-- Keep complexity low. Inline single-use helpers rather than factoring out a function with one call site; don't introduce abstractions until they're needed; no copy-paste duplication.
-- Match the existing style and conventions of the file you're editing.
-- Always ask before removing functionality or code that appears intentional.
-- Where a rule can be enforced deterministically (linter, type-checker, formatter, shellcheck), run that after changes and fix all errors — soft guidance in this file alone gets ignored over long sessions.
+- No emojis in commits, issues, PR comments, or code.
+- When the user asks a question, answer it. Read-only lookups (reading files, read-only commands) to answer are fine; don't modify anything unless the user explicitly asks for action.
+- When responding to user feedback or an analysis, explicitly say whether you agree or disagree. Don't agree by default; if something is wrong, say so and why.
 
 ## Git & Secrets
 
-- Commits are secret-scanned by `githooks/pre-commit` (gitleaks; `setup.sh` installs it into `.git/hooks`). A blocked commit means a real finding: fix it, don't `--no-verify` without asking.
 - Keep real secrets out of code and config — reference them via environment variables (e.g. `$AGNES_API_KEY`) or a `!cat ~/path` indirection, never inline literals.
 
 ## Python Environment
@@ -56,14 +39,6 @@ For browser-based `web-access` (CDP), Chrome and the proxy are on-demand. Run `s
 node skills/web-access/scripts/cdp-proxy.mjs &
 ```
 
-## Interactive Terminals
-
-To drive an *interactive* terminal program (REPL, TUI, prompt-driven installer, repainting CLI), use the `boo-terminal` skill instead of guessing with `sleep`/pipes. boo (`/usr/local/bin/boo`) runs the program in a detached PTY that survives disconnects; read the rendered screen via `peek --json` after `wait`. See `skills/boo-terminal/SKILL.md`.
-
-- **Use boo when**: sending input to an interactive program and reading its screen back; the program needs a real TTY; or a long-running/remote session must survive detaching (e.g. `boo new s -d -- ssh host`, then drive it).
-- **Don't use boo for**: simple non-interactive commands — run those directly with bash/ssh.
-- The human uses tmux for their own work; the agent uses boo headlessly (`new -d` / `send` / `wait` / `peek --json` / `kill` — the prefix key never matters for automation).
-
 ## Workflow Weight
 
 Default to plain conversation — no pipelines, no gates. Scale ceremony with vagueness and blast radius, not uniformly:
@@ -86,7 +61,7 @@ Match model to task; don't burn frontier tokens on mechanical work. Prefer `kiro
 
 ## Subagents — use the `Agent` tool (DEFAULT)
 
-Spawn subagents with the built-in `Agent` tool (backed by the `@tintinweb/pi-subagents` extension). It already gives the human live visibility, so there is no need to route subagents through boo.
+Spawn subagents with the built-in `Agent` tool (backed by the `@tintinweb/pi-subagents` extension). It already gives the human live visibility.
 
 - **Pass `run_in_background: true`** for anything the human may want to watch — that keeps the agent in the live widget above the editor (animated spinner, current tool activity, token/context counts). Foreground calls collapse the widget as soon as they finish.
 - The human watches via two native entry points:
@@ -96,7 +71,6 @@ Spawn subagents with the built-in `Agent` tool (backed by the `@tintinweb/pi-sub
 - Run several in parallel as separate background `Agent` calls (the extension queues them, default concurrency 4).
 - Delegate only large, genuinely independent tracks of work (e.g. a wide multi-file investigation). Don't delegate what you can finish yourself in a handful of tool calls, and don't spawn subagents to verify or double-check your own work. If one subagent can do it, use one.
 - **The Agent tool's `isolation: "worktree"` is unreliable** (observed 2026-09: four "isolated" agents all ran in the main checkout and clobbered each other). For parallel write work, create worktrees manually (`git worktree add /tmp/wt-<name> <ref> --detach`) and hard-code the path in each agent's prompt ("Work ONLY inside /tmp/wt-x; cd there first"). Verify `git status` in the main checkout afterwards.
-- boo is **not** for subagents anymore — keep it for interactive terminal programs and long-lived/detachable sessions only (see the boo-terminal skill).
 
 ## Code Walkthroughs (伴读)
 
