@@ -2,9 +2,15 @@
   "lastChangelogVersion": "1.1.0",
   "defaultThinkingLevel": "high",
   "cacheWarming": "streaming",
-  "defaultProvider": "kiro",
-  "defaultModel": "claude-opus-5",
+  "defaultProvider": "amazon-bedrock",
+  "defaultModel": "global.anthropic.claude-opus-5-5",
   "enabledModels": [
+    "amazon-bedrock/global.anthropic.claude-opus-5-5",
+    "amazon-bedrock/global.anthropic.claude-sonnet-5-5",
+    "amazon-bedrock/global.anthropic.claude-opus-4-8",
+    "amazon-bedrock/global.anthropic.claude-haiku-5-5",
+    "amazon-bedrock/global.anthropic.claude-fable-5-1",
+    "amazon-bedrock/global.anthropic.claude-fable-5",
     "kiro/*",
     "agnes/*",
     "deepseek/*"
@@ -18,14 +24,19 @@
       "source": "../../development/github.com/LEUNGUU/pi-agent-config",
       "extensions": [
         "extensions/*.ts",
-        "+extensions/hindsight-mcp/index.ts"
+        "+extensions/hindsight-mcp/index.ts",
+        "+extensions/subagent/index.ts"
       ]
     },
-    "npm:@tintinweb/pi-subagents",
     "git:https://github.com/badlogic/pi-diff-review",
-    "git:github.com/DietrichGebert/ponytail",
-    "https://github.com/earendil-works/pi-transcribe",
-    "npm:@juicesharp/rpiv-ask-user-question"
+    {
+      "source": "git:github.com/DietrichGebert/ponytail",
+      "skills": [
+        "skills/ponytail-review",
+        "skills/ponytail-audit"
+      ]
+    },
+    "https://github.com/earendil-works/pi-transcribe"
   ],
   "tuiMode": "fullscreen"
 }
