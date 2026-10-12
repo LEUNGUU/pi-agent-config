@@ -1,5 +1,6 @@
 ---
 name: youtube-transcript
+disable-model-invocation: true
 description: Fetch transcripts from YouTube videos for summarization and analysis.
 ---
 

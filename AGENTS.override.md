@@ -20,3 +20,5 @@ Repo-specific rules:
   take effect. Syntax-check with `bun build --no-bundle <file>`.
 - `extensions/walkthrough.ts` (`/reading`) depends on `prompts/walkthrough.md`
   via `expandPromptTemplates` — keep the two in sync if renaming either.
+- Record changes that affect behavior or prompt size in `CHANGELOG.md` under
+  `[Unreleased]`, in the same commit.

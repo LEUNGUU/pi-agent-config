@@ -1,5 +1,6 @@
 ---
 name: otty
+disable-model-invocation: true
 description: Drive Otty, the terminal this session runs inside — see its windows, tabs and panes, split one to work in, run commands there, read back what happened, start a second coding agent and hand it a task, wait for any of it to finish. Use when the user types `/otty …`, names Otty or one of its panes / tabs / windows, or asks to "run this in a split", "get another agent on X", "do these two in parallel", "keep working while that builds". Requires $OTTY_PANE_ID.
 ---
 

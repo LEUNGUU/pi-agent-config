@@ -1,5 +1,6 @@
 ---
 name: python-dev-guidelines
+disable-model-invocation: true
 description: Python development best practices for DevSecOps. Covers type hints, error handling, testing with pytest, logging patterns, dependency management, security practices, and code organization. Use when writing Python code, creating modules, setting up projects, or debugging Python applications.
 ---
 

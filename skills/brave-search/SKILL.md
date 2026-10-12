@@ -1,5 +1,6 @@
 ---
 name: brave-search
+disable-model-invocation: true
 description: "Web search and URL content extraction via Brave Search API. FALLBACK to tavily-search: use when Tavily hits its quota/rate limit or the user asks for Brave. No browser needed; use web-access for interactive, login-walled, or JS-heavy pages."
 ---
 

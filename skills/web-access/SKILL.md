@@ -1,5 +1,6 @@
 ---
 name: web-access
+disable-model-invocation: true
 license: MIT
 github: https://github.com/eze-is/web-access
 description:

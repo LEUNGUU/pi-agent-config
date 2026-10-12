@@ -1,5 +1,6 @@
 ---
 name: shell-script-guidelines
+disable-model-invocation: true
 description: Shell scripting best practices for DevSecOps automation. Covers error handling, argument validation, logging, debugging, POSIX compliance, security patterns, and shellcheck best practices. Use when writing bash/sh scripts, automation tools, CI/CD scripts, or deployment automation.
 ---
 

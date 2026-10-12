@@ -1,5 +1,6 @@
 ---
 name: agnes-media
+disable-model-invocation: true
 description: Generate images and videos with Agnes AI generation models (agnes-image-2.1-flash, agnes-video-v2.0) via the Agnes apihub REST API. Use when the user asks to generate, create, or draw an image with Agnes, or to generate/create a video with Agnes (text-to-image, image-to-image, text-to-video, image-to-video). Generation only — these models cannot read, describe, or summarize an existing image or video.
 ---
 

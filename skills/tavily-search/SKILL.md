@@ -9,6 +9,28 @@ allowed-tools: Bash(tvly *)
 
 Web search returning LLM-optimized results with content snippets and relevance scores.
 
+## Web routing
+
+Tavily first (paid credits). A `402` means credits ran out: tell the user, then fall back.
+
+| Task | Use | Fallback |
+|---|---|---|
+| Deep research / report | `tvly research` (`--model mini` for a quick pass) | — |
+| Web search | `tavily-search` | `brave-search` on 429 / network error. Pinpoint lookups (GitHub issue, release tag, doc page): Exa via `mcporter call exa.web_search_exa` |
+| Read a known URL | `tavily-extract` | `web-access` for login-walled / anti-scraping pages |
+| YouTube, Bilibili, GitHub, V2EX, RSS, login platforms | `agent-reach` | — |
+| Click, fill, screenshot, logged-in pages | `web-access` (CDP browser) | — |
+
+brave-search, web-access and agent-reach are hidden from the skills list: read their `SKILL.md` before first use (`~/.pi/agent/skills/brave-search/`, `~/.pi/agent/skills/web-access/`, `~/.agents/skills/agent-reach/`). agent-reach is only for the platforms above. It and Exa need `EXA_API_KEY` from `~/.env.zsh`, so start pi from zsh. If a layer fails, escalate (search → extract → browser) instead of retrying.
+
+CDP Chrome is on-demand: run `~/.pi/agent/skills/web-access/scripts/check-deps.mjs`; if not connected, start Chrome with the copied profile (Chrome 136+ refuses remote debugging on the default one), then the proxy:
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --remote-debugging-port=9222 --user-data-dir="$HOME/.cdp-chrome-profile" &
+node ~/.pi/agent/skills/web-access/scripts/cdp-proxy.mjs &
+```
+
 ## Before running any command
 
 If `tvly` is not found on PATH, install it first:
