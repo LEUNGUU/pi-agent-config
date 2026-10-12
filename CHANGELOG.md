@@ -8,8 +8,19 @@ print mode (`pi --mode json --no-session "reply ok"`), measured on Bedrock.
 
 First request: 19,539 -> 9,756 tokens.
 
+### Added
+
+- `pi-handoff` package (`/handoff`: write a handoff doc and continue in a new
+  session). Command only, no tools, so no prompt cost. Unpinned: tracks the
+  author's `main` on `pi update`.
+
 ### Changed
 
+- tavily-cli 0.1.4 -> 0.1.8 (`tvly init`, `tvly update`, `login --no-browser`).
+  Tavily skills follow upstream: `-o` saves JSON, extract checks
+  `failed_results`, search verifies identity-sensitive facts at the primary
+  source, Web routing gains a crawl/map row. `tavily-cli` is hidden from the
+  skills list (`/skill:tavily-cli` still works).
 - Default model is Bedrock `global.anthropic.claude-opus-5-5` (was kiro
   `claude-opus-5`). Also enabled on Bedrock: Sonnet 5.5, Opus 4.8, Haiku 5.5,
   Fable 5.1, Fable 5; `models.json` gives each a display name ("internal

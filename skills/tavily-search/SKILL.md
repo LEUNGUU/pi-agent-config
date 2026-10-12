@@ -17,6 +17,7 @@ Tavily first (paid credits). A `402` means credits ran out: tell the user, then 
 |---|---|---|
 | Deep research / report | `tvly research` (`--model mini` for a quick pass) | — |
 | Web search | `tavily-search` | `brave-search` on 429 / network error. Pinpoint lookups (GitHub issue, release tag, doc page): Exa via `mcporter call exa.web_search_exa` |
+| Crawl / map a site | `tvly crawl` / `tvly map` (see `--help`) | — |
 | Read a known URL | `tavily-extract` | `web-access` for login-walled / anti-scraping pages |
 | YouTube, Bilibili, GitHub, V2EX, RSS, login platforms | `agent-reach` | — |
 | Click, fill, screenshot, logged-in pages | `web-access` (CDP browser) | — |
@@ -86,7 +87,7 @@ tvly search "react hooks tutorial" --include-raw-content --max-results 3 --json
 | `--include-images` | Include image results |
 | `--include-image-descriptions` | Include AI image descriptions |
 | `--chunks-per-source` | Chunks per source (advanced/fast depth only) |
-| `-o, --output` | Save output to file |
+| `-o, --output` | Save the JSON response to a file |
 | `--json` | Structured JSON output |
 
 ## Search depth
@@ -106,6 +107,7 @@ tvly search "react hooks tutorial" --include-raw-content --max-results 3 --json
 - **Use `--include-domains`** to focus on trusted sources.
 - **Use `--time-range`** for recent information.
 - Read from stdin: `echo "query" | tvly search - --json`
+- **Verify identity-sensitive facts at the primary source.** For releases, versions, ownership, or similarly named projects, confirm the official repo or domain instead of trusting a generated answer or a package-name match.
 
 ## See also
 

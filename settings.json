@@ -36,7 +36,8 @@
         "skills/ponytail-audit"
       ]
     },
-    "https://github.com/earendil-works/pi-transcribe"
+    "https://github.com/earendil-works/pi-transcribe",
+    "git:github.com/kartikkabadi/pi-handoff"
   ],
   "tuiMode": "fullscreen"
 }

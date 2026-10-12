@@ -4,6 +4,7 @@ description: |
   Web search, URL content extraction, site crawling, URL discovery, and deep research with citations via the Tavily CLI. Use for umbrella web tasks: "research this topic", "crawl this documentation site", "fetch this page", "find articles about". Not for local files, git, or code editing.
 compatibility: Requires tavily-cli (`curl -fsSL https://cli.tavily.com/install.sh | bash`) and a Tavily API key from tavily.com.
 allowed-tools: Bash(tvly *)
+disable-model-invocation: true
 ---
 
 # Tavily CLI
@@ -14,13 +15,7 @@ Run `tvly --help` or `tvly <command> --help` for full option details.
 
 ## Prerequisites
 
-Must be installed and authenticated. Check with `tvly --status`.
-
-```bash
-tavily v0.1.0
-
-> Authenticated via OAuth (tvly login)
-```
+Must be installed and authenticated. Check with `tvly --status --json`.
 
 If not ready:
 
@@ -28,7 +23,7 @@ If not ready:
 curl -fsSL https://cli.tavily.com/install.sh | bash
 ```
 
-Or manually: `uv tool install tavily-cli` / `pip install tavily-cli`
+Or manually: `uv tool install tavily-cli` / `pip install tavily-cli`. Upgrade: `uv tool upgrade tavily-cli`.
 
 Then authenticate:
 
@@ -64,7 +59,7 @@ All commands support `--json` for structured, machine-readable output and `-o` t
 
 ```bash
 tvly search "react hooks" --json -o results.json
-tvly extract "https://example.com/docs" -o docs.md
+tvly extract "https://example.com/docs" -o docs.json
 tvly crawl "https://docs.example.com" --output-dir ./docs/
 ```
 

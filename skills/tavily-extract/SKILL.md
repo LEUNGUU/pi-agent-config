@@ -43,7 +43,7 @@ tvly extract "https://example.com/docs" --query "authentication API" --chunks-pe
 tvly extract "https://app.example.com" --extract-depth advanced --json
 
 # Save to file
-tvly extract "https://example.com/article" -o article.md
+tvly extract "https://example.com/article" -o article.json
 ```
 
 ## Options
@@ -56,7 +56,7 @@ tvly extract "https://example.com/article" -o article.md
 | `--format` | `markdown` (default) or `text` |
 | `--include-images` | Include image URLs |
 | `--timeout` | Max wait time (1-60 seconds) |
-| `-o, --output` | Save output to file |
+| `-o, --output` | Save the JSON response to a file |
 | `--json` | Structured JSON output |
 
 ## Extract depth
@@ -73,6 +73,7 @@ tvly extract "https://example.com/article" -o article.md
 - **Try `basic` first**, fall back to `advanced` if content is missing.
 - **Set `--timeout`** for slow pages (up to 60s).
 - If search results already contain the content you need (via `--include-raw-content`), skip the extract step.
+- **Inspect `failed_results` even on exit code 0.** A successful request can still return no page for some URLs; retry those with `--extract-depth advanced` or report the per-URL failure.
 
 ## See also
 
