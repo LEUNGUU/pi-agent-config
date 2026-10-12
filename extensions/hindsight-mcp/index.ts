@@ -112,16 +112,21 @@ function lastAssistantText(messages: unknown): string {
 
 export default function hindsightMcp(pi: ExtensionAPI) {
 	// Built-in MCP connects this on session start; reconnect/inspect via /mcp.
-	// recall/retain/reflect are small and frequent: declared directly. The
-	// list_* enumerators return up to 100 items; `codemode` forces the model to
-	// filter them in a script instead of dumping the JSON into context.
+	// Every tool is reachable only from codemode (searchTools / describeTool):
+	// declaring even recall/retain/reflect directly costs ~1.8k tokens per
+	// request, while codemode costs nothing until called and needs no extra
+	// tool_search round trip. The mcp_servers section carries the description
+	// below, so the model still knows the server exists. The list_* enumerators
+	// return up to 100 items: a script must filter them instead of dumping the
+	// JSON into context.
 	// delete_*/clear_* are irreversible bulk operations: hidden; run them from
 	// the Hindsight UI/API instead of via the model.
 	pi.registerMcpServer("hindsight", {
 		url: MCP_URL,
-		exposure: "direct",
-		toolExposure: { "list_*": "codemode", "delete_*": "hidden", "clear_*": "hidden" },
-		description: "Long-term memory: recall, reflect, retain facts and preferences across sessions",
+		exposure: "codemode",
+		toolExposure: { "delete_*": "hidden", "clear_*": "hidden" },
+		description:
+			"Long-term memory of the user across sessions: recall({query}) before personal suggestions, retain({content}) for new preferences or facts, reflect({query}) for synthesis",
 	});
 
 	// Set per turn from before_agent_start; agent_end capture reads it too.
@@ -136,6 +141,45 @@ export default function hindsightMcp(pi: ExtensionAPI) {
 			block: true,
 			reason: `Hindsight is disabled under ${ctx.model?.id} (internal-use model: no customer data, ITAR or PII).`,
 		};
+	});
+
+	// --- Recall: smaller, flatter results ---
+	// The server default (max_tokens 4096) returns ~85 facts as full JSON
+	// records, duplicated in content and structuredContent: ~21k tokens per call.
+	// Cap at 1024 unless the caller asks for more, and keep only what the model
+	// reads (type, date, text). Default types skip `experience`: session capture
+	// below retains every prompt as one, so recall would mostly echo the user's
+	// own earlier questions. Pass types explicitly to search them.
+	// Nested codemode calls pass through these hooks too.
+	const RECALL = "mcp__hindsight__recall";
+
+	pi.on("tool_call", async (event) => {
+		if (event.toolName !== RECALL) return;
+		const input = event.input as { max_tokens?: number; types?: string[] };
+		input.max_tokens ??= 1024;
+		input.types ??= ["world", "observation"];
+	});
+
+	pi.on("tool_result", async (event) => {
+		if (event.toolName !== RECALL || event.isError) return;
+		const first = event.content?.[0];
+		if (first?.type !== "text") return;
+		let results: { text?: string; fact_type?: string; mentioned_at?: string | null }[];
+		try {
+			results = JSON.parse(first.text).results;
+		} catch {
+			return; // unexpected shape: pass through untouched
+		}
+		if (!Array.isArray(results)) return;
+		const facts = results.map((r) => ({
+			type: r.fact_type ?? "",
+			date: r.mentioned_at?.slice(0, 10) ?? "",
+			text: r.text ?? "",
+		}));
+		const text = facts.length
+			? facts.map((f) => `- [${f.type} ${f.date}] ${f.text}`).join("\n")
+			: "No memories found.";
+		return { content: [{ type: "text", text }], structuredContent: { facts } };
 	});
 
 	// --- Session capture: stream prompts + responses into Hindsight ---
