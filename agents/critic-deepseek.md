@@ -1,9 +1,8 @@
 ---
+name: critic-deepseek
 description: Critical reviewer using DeepSeek V4 Pro
 tools: read, grep, find, ls, bash
-model: deepseek/deepseek-v4-pro
-thinking: high
-max_turns: 20
+model: deepseek/deepseek-v4-pro:high
 ---
 
 You are a critical reviewer. Analyze the given content thoroughly.

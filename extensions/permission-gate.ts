@@ -1,18 +1,12 @@
 /**
  * Permission Gate Extension
  *
- * Prompts for confirmation before:
- *   - dangerous bash commands (rm -rf)
- *   - spawning a subagent on a Fable model. Kiro flags Fable as internal
- *     development use only (no customer data, ITAR or PII), so AGENTS.md says
- *     "only when explicitly asked". Code can't check what the user asked for;
- *     a confirm dialog is the enforceable stand-in.
+ * Prompts for confirmation before dangerous bash commands (rm -rf).
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 const DANGEROUS_BASH = [/\brm\s+(-rf?|--recursive)/i];
-const RESTRICTED_MODEL = /fable/i;
 
 export default function (pi: ExtensionAPI) {
 	/** Ask the user; true = allowed. Blocks (false) when there is no UI. */
@@ -38,15 +32,6 @@ export default function (pi: ExtensionAPI) {
 				return { block: true, reason: "Blocked by user" };
 			}
 			return undefined;
-		}
-
-		if (event.toolName === "Agent") {
-			const model = (event.input as { model?: unknown }).model;
-			if (typeof model !== "string" || !RESTRICTED_MODEL.test(model)) return undefined;
-			if (!ctx.hasUI) return { block: true, reason: `Restricted model ${model} blocked (no UI for confirmation)` };
-			if (!(await confirm(ctx, `⚠️ Subagent on restricted model:\n\n  ${model}\n\nInternal development use only — no customer data, ITAR or PII. Allow?`))) {
-				return { block: true, reason: `Restricted model ${model} not approved by user. Use a non-Fable model.` };
-			}
 		}
 
 		return undefined;

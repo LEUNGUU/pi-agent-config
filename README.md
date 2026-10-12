@@ -51,7 +51,7 @@ What `setup.sh` does:
 4. Edit `~/.pi/agent/models.json` — replace the seeded placeholders with this
    machine's real endpoints and keys (kiro gateway `baseUrl`, API keys).
 5. Start `pi` anywhere and sanity-check: `/model` lists the custom providers,
-   `/agents` lists the subagents, and a `read` of any file renders normally.
+   and a `read` of any file renders normally.
 6. Optional: web skills setup below.
 7. Optional (macOS): Otty terminal setup below.
 
