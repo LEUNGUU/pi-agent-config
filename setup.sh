@@ -33,7 +33,9 @@ done
 if [[ -d "$HOME/.config" ]]; then
     mkdir -p "$HOME/.config/otty"
     otty_dst="$HOME/.config/otty/config.toml"
-    if pgrep -x otty >/dev/null 2>&1; then
+    # pgrep misses the GUI process on macOS; stop if ps cannot list processes.
+    running_processes="$(ps -ax -o comm=)"
+    if grep -E '(^|/)[Oo]tty$' <<< "$running_processes" >/dev/null; then
         echo "Warning: Otty is running — skipped config.toml (quit Otty, then re-run)"
     else
         if [[ -e "$otty_dst" ]] && ! cmp -s "$REPO_DIR/otty/config.toml" "$otty_dst"; then
