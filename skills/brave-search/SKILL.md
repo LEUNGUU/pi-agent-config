@@ -1,12 +1,14 @@
 ---
 name: brave-search
 disable-model-invocation: true
-description: "Web search and URL content extraction via Brave Search API. FALLBACK to tavily-search: use when Tavily hits its quota/rate limit or the user asks for Brave. No browser needed; use web-access for interactive, login-walled, or JS-heavy pages."
+description: "Optional web search and URL extraction via Brave Search API when the user explicitly requests Brave. Ordinary web search uses Tavily with Exa direct API as fallback. No browser needed; use web-access for interactive or login-walled pages."
 ---
 
 # Brave Search
 
 Web search and content extraction using the official Brave Search API. No browser required.
+This is an optional route for explicit Brave requests. It is not automatic fallback to Tavily.
+Read the Tavily core skill for the default Tavily → Exa direct API routing.
 
 ## Setup
 

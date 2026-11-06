@@ -2,7 +2,7 @@
 name: tavily-cli
 description: |
   Web search, URL content extraction, site crawling, URL discovery, and deep research with citations via the Tavily CLI. Use for umbrella web tasks: "research this topic", "crawl this documentation site", "fetch this page", "find articles about". Not for local files, git, or code editing.
-compatibility: Requires tavily-cli (`curl -fsSL https://cli.tavily.com/install.sh | bash`) and a Tavily API key from tavily.com.
+compatibility: Requires the tvly CLI. Search and extract support keyless limits; map, crawl, and research require authentication.
 allowed-tools: Bash(tvly *)
 disable-model-invocation: true
 ---
@@ -15,23 +15,10 @@ Run `tvly --help` or `tvly <command> --help` for full option details.
 
 ## Prerequisites
 
-Must be installed and authenticated. Check with `tvly --status --json`.
-
-If not ready:
-
-```bash
-curl -fsSL https://cli.tavily.com/install.sh | bash
-```
-
-Or manually: `uv tool install tavily-cli` / `pip install tavily-cli`. Upgrade: `uv tool upgrade tavily-cli`.
-
-Then authenticate:
-
-```bash
-tvly login --api-key tvly-YOUR_KEY
-# or: export TAVILY_API_KEY=tvly-YOUR_KEY
-# or: tvly login  (opens browser for OAuth)
-```
+Read the [core skill](../tavily-search/SKILL.md) for web routing and bounded search defaults.
+Search and extract can run keyless with rate limits. Other operations require authentication.
+Use the provided `TAVILY_API_KEY` environment variable; never print keys or put them in command arguments.
+If setup is needed, follow [setup](../tavily-search/references/setup.md). Do not run login or init before every command.
 
 ## Workflow
 
@@ -49,9 +36,11 @@ Follow this escalation pattern — start simple, escalate when needed:
 | Get a page's content | `tvly extract` | Have a URL |
 | Find URLs within a site | `tvly map` | Need to locate a specific subpage |
 | Bulk extract a site section | `tvly crawl` | Need many pages (e.g., all /docs/) |
-| Deep research with citations | `tvly research` | Need multi-source synthesis |
+| Deep research with citations | `tvly research run` | Need multi-source synthesis |
 
-For detailed command reference, use the individual skill for each command (e.g., `tavily-search`, `tavily-crawl`) or run `tvly <command> --help`.
+For search and extract, use the core skill or the existing `tavily-extract` entry point.
+See [map](../tavily-search/references/map.md) and [crawl](../tavily-search/references/crawl.md) for bounded workflows.
+Run `tvly <command> --help` for exact flags.
 
 ## Output
 
@@ -68,4 +57,6 @@ tvly crawl "https://docs.example.com" --output-dir ./docs/
 - **Always quote URLs** — shell interprets `?` and `&` as special characters.
 - **Use `--json` for agentic workflows** — every command supports it.
 - **Read from stdin with `-`** — `echo "query" | tvly search -`
-- **Exit codes**: 0 = success, 2 = bad input, 3 = auth error, 4 = API error.
+- **Batch searches**: CLI 0.2.1 accepts up to 5 queries with the same options. JSON output is an array; check each response for errors.
+- **Output limits**: `--max-chars` affects terminal display, not JSON, saved files, or API charges.
+- **Exit codes**: 0 = success, 1 = setup/update failure, 2 = bad input, 3 = auth error, 4 = API error.

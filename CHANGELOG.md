@@ -10,12 +10,30 @@ First request: 19,539 -> 9,756 tokens.
 
 ### Added
 
+- `extensions/bedrock-gpt-summary.ts` requests readable reasoning summaries for
+  Bedrock OpenAI GPT models with thinking enabled. Keeps existing effort and
+  summary settings; leaves Claude and GPT-OSS unchanged. No prompt cost.
+  Also strips readable reasoning from GPT assistant history: Bedrock rejects
+  `reasoningContent.reasoningText` on replay (encrypted blocks are kept).
 - `pi-handoff` package (`/handoff`: write a handoff doc and continue in a new
   session). Command only, no tools, so no prompt cost. Unpinned: tracks the
   author's `main` on `pi update`.
 
 ### Changed
 
+- Reviewer subagent `critic-deepseek` is now `critic` on Bedrock
+  `global.openai.gpt-6.1-terra:high`. DeepSeek is no longer allowed: removed the
+  `deepseek` provider from `models.json` and `deepseek/*` from `enabledModels`.
+- Web search fallback is Exa direct HTTPS API via the dependency-free
+  `tavily-search/scripts/exa-search.mjs` helper (auto mode, five results), not
+  mcporter or Brave. Credentials go through curl stdin, not process arguments.
+  Platform access uses existing tools directly. The GitHub research-token rule
+  now lives in global `AGENTS.md` after removing Agent Reach.
+- Tavily CLI 0.1.8 -> 0.2.1 via uv. Merged the upstream core web workflow into
+  `tavily-search`, preserving local Web routing, fast/basic-first searches, and
+  read-only subagents. Added setup, map, and crawl references; kept the existing
+  `tavily-cli` and `tavily-extract` entry points. Batch searches check each query
+  for errors. No task skills installed; did not run `tvly init` or `tvly set-default`.
 - tavily-cli 0.1.4 -> 0.1.8 (`tvly init`, `tvly update`, `login --no-browser`).
   Tavily skills follow upstream: `-o` saves JSON, extract checks
   `failed_results`, search verifies identity-sensitive facts at the primary
@@ -52,6 +70,11 @@ First request: 19,539 -> 9,756 tokens.
 
 ### Removed
 
+- Agent Reach CLI and skill. GitHub research credentials and browser-login
+  boundaries moved to `AGENTS.md`; platform routes use existing standalone
+  tools. Kept the private data directory and an archived skill backup.
+- Agnes from the model configuration and GPT-5.5 from the live Bedrock model
+  configuration; both are removed from the scoped model list.
 - kiro models (unused): claude-opus-4.7, claude-opus-5, claude-sonnet-4.6,
   claude-sonnet-5, claude-haiku-4.5, minimax-m2.1, minimax-m2.5, deepseek-3.2.
 - Agents: builder, builder-frontier, critic-agnes, critic-glm, critic-minimax,
@@ -69,6 +92,10 @@ First request: 19,539 -> 9,756 tokens.
 
 ### Fixed
 
+- `setup.sh` detects the running Otty GUI from executable paths instead of
+  `pgrep`, which missed it on this Mac. Skips config and theme copies while
+  Otty runs; stops before either copy if process listing fails. Added isolated
+  setup tests; no prompt cost.
 - `models.json` seed held the real kiro gateway address; now a placeholder
   (`YOUR-KIRO-GATEWAY`) in every commit on `main`: history rewritten and
   force-pushed on 2026-10-12, so older hashes changed. GitHub's read-only

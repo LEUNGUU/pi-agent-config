@@ -9,17 +9,12 @@ allowed-tools: Bash(tvly *)
 
 Extract clean markdown or text content from one or more URLs.
 
-## Before running any command
+## Before running a web task
 
-If `tvly` is not found on PATH, install it first:
-
-```bash
-curl -fsSL https://cli.tavily.com/install.sh | bash && tvly login
-```
-
-Do not skip this step or fall back to other tools.
-
-See [tavily-cli](../tavily-cli/SKILL.md) for alternative install methods and auth options.
+Read the [core skill](../tavily-search/SKILL.md) for web routing and its Extract workflow.
+Extract supports keyless mode with rate limits; use the provided `TAVILY_API_KEY` when configured.
+Do not force login before extracting a page or print credential values.
+If setup is needed, follow [setup](../tavily-search/references/setup.md).
 
 ## When to use
 
@@ -78,4 +73,4 @@ tvly extract "https://example.com/article" -o article.json
 ## See also
 
 - [tavily-search](../tavily-search/SKILL.md) — find pages when you don't have a URL
-- [tavily-crawl](../tavily-crawl/SKILL.md) — extract content from many pages on a site
+- [Crawl reference](../tavily-search/references/crawl.md) — extract content from many pages on a site
