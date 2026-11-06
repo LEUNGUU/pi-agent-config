@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "1.1.0",
+  "lastChangelogVersion": "1.5.0",
   "defaultThinkingLevel": "high",
   "cacheWarming": "streaming",
   "defaultProvider": "amazon-bedrock",
@@ -11,11 +11,18 @@
     "amazon-bedrock/global.anthropic.claude-haiku-5-5",
     "amazon-bedrock/global.anthropic.claude-fable-5-1",
     "amazon-bedrock/global.anthropic.claude-fable-5",
-    "kiro/*",
-    "agnes/*",
-    "deepseek/*"
+    "amazon-bedrock/global.openai.gpt-6.1-sol",
+    "amazon-bedrock/global.openai.gpt-6.1-terra",
+    "amazon-bedrock/global.openai.gpt-6-sol",
+    "amazon-bedrock/global.openai.gpt-6-luna",
+    "amazon-bedrock/global.openai.gpt-5.6-sol",
+    "amazon-bedrock/global.openai.gpt-5.6-terra",
+    "amazon-bedrock/global.openai.gpt-5.6-luna",
+    "amazon-bedrock/global.xai.grok-4.7",
+    "amazon-bedrock/global.xai.grok-4.6",
+    "amazon-bedrock/global.moonshotai.kimi-k3"
   ],
-  "theme": "paper-green/catppuccin-mocha",
+  "theme": "system",
   "terminal": {
     "showTerminalProgress": true
   },

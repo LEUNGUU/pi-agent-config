@@ -1,11 +1,11 @@
 ---
-description: Independent review by critic-deepseek, verified in the main context
+description: Independent review by critic, verified in the main context
 ---
 Ask one critic to review the following:
 
 $@
 
-subagent({ agent: "critic-deepseek", task: "<the review task, with file paths or the diff command>" })
+subagent({ agent: "critic", task: "<the review task, with file paths or the diff command>" })
 
 When it returns:
 - Verify each finding yourself against the code before including it

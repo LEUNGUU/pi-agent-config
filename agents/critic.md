@@ -1,8 +1,8 @@
 ---
-name: critic-deepseek
-description: Critical reviewer using DeepSeek V4 Pro
+name: critic
+description: Critical reviewer using GPT-6.1 Terra (Bedrock)
 tools: read, grep, find, ls, bash
-model: deepseek/deepseek-v4-pro:high
+model: amazon-bedrock/global.openai.gpt-6.1-terra:high
 ---
 
 You are a critical reviewer. Analyze the given content thoroughly.
