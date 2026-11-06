@@ -54,6 +54,14 @@ const BLOCKED_MODEL = /fable/i;
 // ---------------------------------------------------------------------------
 let projectTag: string | undefined;
 
+/** Tells extraction who said what, so the agent's own "fixed" or "done" is kept as its claim, not a fact. */
+const RETAIN_CONTEXT =
+	"One turn between the user and their AI coding agent. User lines are the user's own words and preferences; " +
+	"Assistant lines are the agent's claims about its work, not verified facts.";
+
+/** Warn once per process: a stale HINDSIGHT_HOST once dropped a whole session without a trace. */
+let captureWarned = false;
+
 function resolveProjectTag(): string {
 	if (projectTag) return projectTag;
 	let root: string;
@@ -72,7 +80,7 @@ function resolveProjectTag(): string {
 	return projectTag;
 }
 
-function retain(content: string): void {
+function retain(content: string, warn: (message: string) => void): void {
 	if (!content.trim()) return;
 	const tag = resolveProjectTag();
 	void fetch(RETAIN_URL, {
@@ -80,13 +88,21 @@ function retain(content: string): void {
 		headers: { "content-type": "application/json" },
 		body: JSON.stringify({
 			async: true,
-			items: [{ content, timestamp: new Date().toISOString(), tags: [tag] }],
+			items: [{ content, context: RETAIN_CONTEXT, timestamp: new Date().toISOString(), tags: [tag] }],
 			document_tags: [tag],
 		}),
 		signal: AbortSignal.timeout(4000),
-	}).catch(() => {
-		// Tunnel down / service unavailable: silently skip capture.
-	});
+	})
+		.then((res) => {
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		})
+		.catch((error: unknown) => {
+			// Never block the session, but say once that capture is off.
+			if (captureWarned) return;
+			captureWarned = true;
+			const reason = error instanceof Error ? error.message : String(error);
+			warn(`Hindsight capture failed (${HINDSIGHT_HOST}: ${reason}). This session is not being saved.`);
+		});
 }
 
 /** Extract plain assistant text from an agent_end message list. */
@@ -182,18 +198,21 @@ export default function hindsightMcp(pi: ExtensionAPI) {
 		return { content: [{ type: "text", text }], structuredContent: { facts } };
 	});
 
-	// --- Session capture: stream prompts + responses into Hindsight ---
+	// --- Session capture: one retain per turn, question and answer together ---
+	// Paired so extraction sees what each reply answers; split items lost that link.
+	let pendingPrompt = "";
 
 	pi.on("before_agent_start", async (event, ctx) => {
 		blocked = BLOCKED_MODEL.test(ctx.model?.id ?? "");
-		if (blocked) return;
-		const prompt = (event as { prompt?: string }).prompt;
-		if (prompt) retain(`User: ${prompt}`);
+		pendingPrompt = blocked ? "" : ((event as { prompt?: string }).prompt ?? "");
 	});
 
-	pi.on("agent_end", async (event, _ctx) => {
+	pi.on("agent_end", async (event, ctx) => {
+		const prompt = pendingPrompt;
+		pendingPrompt = "";
 		if (blocked) return;
 		const text = lastAssistantText((event as { messages?: unknown }).messages);
-		if (text) retain(`Assistant: ${text}`);
+		const turn = [prompt && `User: ${prompt}`, text && `Assistant: ${text}`].filter(Boolean).join("\n\n");
+		retain(turn, (message) => (ctx.hasUI ? ctx.ui.notify(message, "warning") : console.error(message)));
 	});
 }
