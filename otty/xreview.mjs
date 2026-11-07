@@ -1,15 +1,16 @@
 #!/usr/bin/env node
-// xreview: cross-review one change with several coding agents, one Otty tab each.
+// xreview: give one task to several coding agents, one Otty tab each.
 //
-//   node otty/xreview.mjs <scope> [focus...]
-//   scope: --uncommitted | --commit <sha> | --base <ref> | <a>..<b>
+//   node otty/xreview.mjs [diff scope] [--task-file <file> | task text...]
+//   diff scope (optional): --uncommitted | --commit <sha> | --base <ref> | --range <a>..<b>
 //
-// Each reviewer gets the same diff file and prompt, read-only. Claude Code,
-// Codex and Pi run interactively, so the user can keep talking to them in
-// their tab; Kiro runs headless (no Otty integration) and is resumed with
-// `kiro-cli chat --no-interactive --resume`. Blocks until every reviewer is
-// done, then writes <out>/<name>.md per reviewer and <out>/summary.json.
-// Never answers an agent's question: a reviewer stuck on one is reported.
+// Every agent gets the same task (plus the diff file, when a scope is given),
+// read-only. With a scope and no task, the task is a bug-focused code review.
+// Claude Code, Codex and Pi run interactively, so the user can keep talking to
+// them in their tab; Kiro runs headless (no Otty integration) and is resumed
+// with `kiro-cli chat --no-interactive --resume`. Blocks until every agent is
+// done, then writes <out>/<name>.md per agent and <out>/summary.json.
+// Never answers an agent's question: one stuck on a question is reported.
 
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -23,39 +24,69 @@ const otty = (...args) => run("otty", args);
 const ottyJson = (...args) => JSON.parse(otty(...args, "--json")).data;
 const ottyWait = (args) => new Promise((r) => spawn("otty", args, { stdio: "ignore" }).on("close", r));
 
-// --- scope -> diff -----------------------------------------------------------
-const [scope, ...rest] = process.argv.slice(2);
-if (!scope) {
-	console.error("usage: xreview.mjs --uncommitted | --commit <sha> | --base <ref> | <a>..<b> [focus]");
+// --- arguments -> task (+ optional diff) -----------------------------------------
+const USAGE =
+	"usage: xreview.mjs [--uncommitted | --commit <sha> | --base <ref> | --range <a>..<b>] [--task-file <file> | task...]";
+const SCOPES = {
+	"--uncommitted": () => [["diff", "HEAD"], "uncommitted changes"],
+	"--commit": (v) => [["show", v], `commit ${v}`],
+	"--base": (v) => [["diff", `${v}...HEAD`], `changes since ${v}`],
+	"--range": (v) => [["diff", v], `range ${v}`],
+};
+const args = process.argv.slice(2);
+let diffArgs, label, taskFile, diffFile;
+const words = [];
+for (let i = 0; i < args.length; i++) {
+	const a = args[i];
+	const needsValue = a === "--task-file" || (a in SCOPES && a !== "--uncommitted");
+	if (needsValue && args[i + 1] === undefined) {
+		console.error(`${a} needs a value\n${USAGE}`);
+		process.exit(2);
+	}
+	if (a === "--task-file") taskFile = args[++i];
+	else if (a in SCOPES) [diffArgs, label] = SCOPES[a](needsValue ? args[++i] : undefined);
+	else words.push(a);
+}
+let task = (taskFile ? readFileSync(taskFile, "utf8") : words.join(" ")).trim();
+if (!task && !diffArgs) {
+	console.error(USAGE);
 	process.exit(2);
 }
-let diffArgs, label, focus;
-if (scope === "--uncommitted") [diffArgs, label, focus] = [["diff", "HEAD"], "uncommitted changes", rest];
-else if (scope === "--commit") [diffArgs, label, focus] = [["show", rest[0]], `commit ${rest[0]}`, rest.slice(1)];
-else if (scope === "--base") [diffArgs, label, focus] = [["diff", `${rest[0]}...HEAD`], `changes since ${rest[0]}`, rest.slice(1)];
-else [diffArgs, label, focus] = [["diff", scope], `range ${scope}`, rest];
 
-const root = run("git", ["rev-parse", "--show-toplevel"]);
+let root;
+try {
+	root = run("git", ["rev-parse", "--show-toplevel"], { stdio: ["ignore", "pipe", "ignore"] });
+} catch {
+	if (diffArgs) throw new Error("xreview: a diff scope needs a git repository");
+	root = process.cwd();
+}
 const out = join("/tmp/xreview", new Date().toISOString().replace(/[:.]/g, "-"));
 mkdirSync(out, { recursive: true });
-const diffFile = join(out, "diff.patch");
-writeFileSync(diffFile, run("git", ["-C", root, ...diffArgs], { maxBuffer: 64 << 20 }) + "\n");
-if (readFileSync(diffFile, "utf8").trim() === "") {
-	console.error(`xreview: ${label} is empty`);
-	process.exit(1);
-}
 
+const parts = [];
+if (diffArgs) {
+	diffFile = join(out, "diff.patch");
+	writeFileSync(diffFile, run("git", ["-C", root, ...diffArgs], { maxBuffer: 64 << 20 }) + "\n");
+	if (readFileSync(diffFile, "utf8").trim() === "") {
+		console.error(`xreview: ${label} is empty`);
+		process.exit(1);
+	}
+	task ||=
+		"Review this change. Report only real bugs, security issues and risky edge cases. " +
+		"For each: file:line, why it matters, and how sure you are. No style nits. If you find nothing serious, say so.";
+	parts.push(`The full diff of the ${label} is in ${diffFile}.`);
+}
 const prompt = [
-	`Review the ${label} in this repository (${root}).`,
-	`The full diff is in ${diffFile}; read any repository file you need.`,
-	"Report only real bugs, security issues and risky edge cases. For each: file:line, why it matters, and how sure you are.",
-	"No style nits. Do not modify any file. If you find nothing serious, say so.",
+	`Task: ${task}`,
+	"",
+	...parts,
+	`You are working in ${root}; read any file you need. Do not modify any file.`,
 	// Without a budget one reviewer spent 113 tool calls (22 min) on a 30 KB diff.
-	"Work efficiently: read the diff first, then only the files you need, about 20 tool calls at most.",
-	focus.length ? `Focus: ${focus.join(" ")}` : "",
-].filter(Boolean).join("\n");
+	"Work efficiently: read only what the task needs, about 20 tool calls at most.",
+].join("\n");
 const promptFile = join(out, "prompt.txt");
 writeFileSync(promptFile, prompt + "\n");
+label ||= "task";
 
 // --- reviewers -----------------------------------------------------------------
 const q = (s) => `'${s.replaceAll("'", `'\\''`)}'`;

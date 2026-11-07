@@ -10,12 +10,13 @@ First request: 19,539 -> 9,756 tokens.
 
 ### Added
 
-- `/xreview <scope> [focus]` cross-reviews one change with Claude Code, Codex,
-  Kiro and Pi on Grok 4.7, one Otty tab each, through `otty/xreview.mjs`. Every
-  reviewer gets the same diff and prompt, read-only; the main session merges
-  the replies and verifies each finding. Claude, Codex and Grok stay open for
-  follow-up questions; Kiro runs headless and resumes with `--resume`. Prompt
-  cost only when used.
+- `/xreview <task> [diff scope]` gives one task to Claude Code, Codex, Kiro and
+  Pi on Grok 4.7, one Otty tab each, through `otty/xreview.mjs`. Every agent
+  gets the same task read-only, plus the diff when a scope is given (a scope
+  alone means a bug-focused code review). The main session merges the answers,
+  shows where the agents disagree, and checks each claim. Claude, Codex and
+  Grok stay open for follow-up questions; Kiro runs headless and resumes with
+  `--resume`. Prompt cost only when used.
 
 - `extensions/codex-otty-pid.ts` keeps Codex sessions visible in Otty with
   toolbox Codex, whose process chain hides the agent from Otty's pane matching.
