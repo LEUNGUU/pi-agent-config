@@ -59,7 +59,7 @@ const RETAIN_CONTEXT =
 	"One turn between the user and their AI coding agent. User lines are the user's own words and preferences; " +
 	"Assistant lines are the agent's claims about its work, not verified facts.";
 
-/** Warn once per process: a stale HINDSIGHT_HOST once dropped a whole session without a trace. */
+/** Warn once per outage: a stale HINDSIGHT_HOST once dropped a whole session without a trace. */
 let captureWarned = false;
 
 function resolveProjectTag(): string {
@@ -95,35 +95,61 @@ function retain(content: string, warn: (message: string) => void): void {
 	})
 		.then((res) => {
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			captureWarned = false; // recovered: warn again on the next failure
 		})
 		.catch((error: unknown) => {
-			// Never block the session, but say once that capture is off.
+			// Never block the session, but say once per outage that saves are failing.
 			if (captureWarned) return;
 			captureWarned = true;
 			const reason = error instanceof Error ? error.message : String(error);
-			warn(`Hindsight capture failed (${HINDSIGHT_HOST}: ${reason}). This session is not being saved.`);
+			const message = `A Hindsight save failed (${HINDSIGHT_HOST}: ${reason}). Memory capture may be off until it recovers.`;
+			try {
+				warn(message);
+			} catch {
+				console.error(message); // the UI went away (session replaced or reloaded)
+			}
 		});
 }
 
-/** Extract plain assistant text from an agent_end message list. */
-function lastAssistantText(messages: unknown): string {
-	if (!Array.isArray(messages)) return "";
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const m = (messages[i] as { role?: string; content?: unknown })?.content
-			? (messages[i] as { role?: string; content?: unknown })
-			: (messages[i] as { message?: { role?: string; content?: unknown } })?.message;
-		if (!m || (m as { role?: string }).role !== "assistant") continue;
-		const content = (m as { content?: unknown }).content;
-		if (typeof content === "string") return content;
-		if (Array.isArray(content)) {
-			return content
-				.filter((b) => (b as { type?: string }).type === "text")
-				.map((b) => (b as { text?: string }).text ?? "")
-				.join("");
+type Message = { role?: string; content?: unknown; stopReason?: string };
+
+const textOf = (content: unknown): string =>
+	typeof content === "string"
+		? content
+		: Array.isArray(content)
+			? content
+					.filter((b) => (b as { type?: string }).type === "text")
+					.map((b) => (b as { text?: string }).text ?? "")
+					.join("")
+			: "";
+
+/**
+ * One user run as "User:/Assistant:" lines: each user message (the prompt and any
+ * follow-up queued during the run) paired with the last reply before the next one.
+ * Failed and aborted attempts are skipped, so a retry keeps only the real answer.
+ * Custom and tool messages are dropped.
+ */
+export function turnText(messages: readonly unknown[], prompt: string): string {
+	const lines: string[] = [];
+	let reply = "";
+	const flush = () => {
+		if (reply) lines.push(`Assistant: ${reply}`);
+		reply = "";
+	};
+	const all = messages as readonly Message[];
+	const p = prompt.trim();
+	if (p && !all.some((m) => m.role === "user" && textOf(m.content).trim() === p)) lines.push(`User: ${p}`);
+	for (const m of all) {
+		const t = textOf(m.content).trim();
+		if (m.role === "user") {
+			flush();
+			if (t) lines.push(`User: ${t}`);
+		} else if (m.role === "assistant" && m.stopReason !== "error" && m.stopReason !== "aborted" && t) {
+			reply = t;
 		}
-		return "";
 	}
-	return "";
+	flush();
+	return lines.join("\n\n");
 }
 
 export default function hindsightMcp(pi: ExtensionAPI) {
@@ -145,7 +171,7 @@ export default function hindsightMcp(pi: ExtensionAPI) {
 			"Long-term memory of the user across sessions: recall({query}) before personal suggestions, retain({content}) for new preferences or facts, reflect({query}) for synthesis",
 	});
 
-	// Set per turn from before_agent_start; agent_end capture reads it too.
+	// Set per run from before_agent_start; capture reads it at agent_settled.
 	let blocked = false;
 
 	// --- Fable guard: no memory tools, no capture, under a blocked model ---
@@ -198,21 +224,29 @@ export default function hindsightMcp(pi: ExtensionAPI) {
 		return { content: [{ type: "text", text }], structuredContent: { facts } };
 	});
 
-	// --- Session capture: one retain per turn, question and answer together ---
-	// Paired so extraction sees what each reply answers; split items lost that link.
+	// --- Session capture: one retain per user run, once Pi is idle ---
+	// agent_end fires again for retries, compaction retries and queued follow-ups
+	// (no new before_agent_start); only agent_settled is final. So collect every
+	// low-level run's messages and save the whole run at settle.
 	let pendingPrompt = "";
+	let runMessages: unknown[] = [];
 
 	pi.on("before_agent_start", async (event, ctx) => {
 		blocked = BLOCKED_MODEL.test(ctx.model?.id ?? "");
 		pendingPrompt = blocked ? "" : ((event as { prompt?: string }).prompt ?? "");
+		runMessages = [];
 	});
 
-	pi.on("agent_end", async (event, ctx) => {
-		const prompt = pendingPrompt;
+	pi.on("agent_end", async (event) => {
+		if (!blocked) runMessages.push(...((event as { messages?: unknown[] }).messages ?? []));
+	});
+
+	pi.on("agent_settled", async (_event, ctx) => {
+		const turn = blocked ? "" : turnText(runMessages, pendingPrompt);
 		pendingPrompt = "";
-		if (blocked) return;
-		const text = lastAssistantText((event as { messages?: unknown }).messages);
-		const turn = [prompt && `User: ${prompt}`, text && `Assistant: ${text}`].filter(Boolean).join("\n\n");
-		retain(turn, (message) => (ctx.hasUI ? ctx.ui.notify(message, "warning") : console.error(message)));
+		runMessages = [];
+		// Bind the UI now: ctx goes stale after /new or /reload, and the save settles later.
+		const ui = ctx.hasUI ? ctx.ui : undefined;
+		retain(turn, (message) => (ui ? ui.notify(message, "warning") : console.error(message)));
 	});
 }
