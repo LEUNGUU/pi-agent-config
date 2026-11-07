@@ -10,6 +10,20 @@ First request: 19,539 -> 9,756 tokens.
 
 ### Added
 
+- `/xreview <scope> [focus]` cross-reviews one change with Claude Code, Codex,
+  Kiro and Pi on Grok 4.7, one Otty tab each, through `otty/xreview.mjs`. Every
+  reviewer gets the same diff and prompt, read-only; the main session merges
+  the replies and verifies each finding. Claude, Codex and Grok stay open for
+  follow-up questions; Kiro runs headless and resumes with `--resume`. Prompt
+  cost only when used.
+
+- `extensions/codex-otty-pid.ts` keeps Codex sessions visible in Otty with
+  toolbox Codex, whose process chain hides the agent from Otty's pane matching.
+  On every session start it adds a copy of each Otty Codex hook that reports the
+  outermost `codex` process, and rebuilds the copies after an Otty update
+  rewrites `~/.codex/hooks.json`. Otty's own entries are never edited. No prompt
+  cost.
+
 - `extensions/bedrock-gpt-summary.ts` requests readable reasoning summaries for
   Bedrock OpenAI GPT models with thinking enabled. Keeps existing effort and
   summary settings; leaves Claude and GPT-OSS unchanged. No prompt cost.
@@ -91,6 +105,13 @@ First request: 19,539 -> 9,756 tokens.
   (outside this repo; a reinstall may undo it).
 
 ### Fixed
+
+- Hindsight capture saves once per user run, at `agent_settled`, instead of at
+  each `agent_end`. Retries no longer split a turn into a bare question and a
+  bare answer, follow-ups queued during a run keep their own answers, and
+  failed or aborted replies are not saved as answers. The failure warning no
+  longer reads a stale `ctx` after `/new` or `/reload`, and it resets after a
+  successful save. Found by `/xreview`; no prompt cost.
 
 - `setup.sh` detects the running Otty GUI from executable paths instead of
   `pgrep`, which missed it on this Mac. Skips config and theme copies while
