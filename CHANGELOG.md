@@ -37,6 +37,11 @@ First request: 19,539 -> 9,756 tokens.
 
 ### Changed
 
+- explain-better also bans abbreviations (write "pull request", not "PR") and
+  labels such as "item 3" or "option B", and keeps the language the user asked
+  for (for example Chinese) until the user explicitly asks to switch. The
+  hidden per-prompt reminder repeats both. About 90 more system-prompt tokens.
+
 - Reviewer subagent `critic-deepseek` is now `critic` on Bedrock
   `global.openai.gpt-6.1-terra:high`. DeepSeek is no longer allowed: removed the
   `deepseek` provider from `models.json` and `deepseek/*` from `enabledModels`.

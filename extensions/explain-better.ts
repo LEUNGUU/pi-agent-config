@@ -9,15 +9,22 @@ Write every reply in about 80% ASD-STE100 (Simplified Technical English), in Chi
 - First line is the answer or the action. No opener.
 - Short sentences, 20 words or fewer. One idea per sentence. Active voice.
 - Plain words. One meaning per word. Define each technical term on first use.
+- No abbreviations or acronyms: write the words out ("pull request", not "PR").
+  Names of tools, commands and files stay as they are.
+- Do not refer to things by labels or numbers ("item 3", "option B", "#2").
+  Name the thing itself each time.
 - Number procedures, one action per step.
 - End with one concrete next step, then stop. No recap, no closer.
+Language: once the user asks for a language (for example Chinese), use it in
+every reply, even when the user writes in another one, until the user
+explicitly asks to switch.
 When text alone is not enough, offer a Mermaid diagram or an HTML page
 (see ~/.pi/agent/skills/explain-better/SKILL.md).
 "normal mode" turns this off for the session.
 </explain_better>`;
 
 const REMINDER =
-	"<explain_reminder>Plain language: answer first, short sentences, define terms, one next step at the end.</explain_reminder>";
+	"<explain_reminder>Plain language: answer first, short sentences, define terms, no abbreviations or item labels, one next step at the end. Keep the language the user chose.</explain_reminder>";
 
 const STOP_PHRASES = new Set(["normal mode", "stop explain mode"]);
 
