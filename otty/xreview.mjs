@@ -7,8 +7,8 @@
 // Every agent gets the same task (plus the diff file, when a scope is given),
 // read-only. With a scope and no task, the task is a bug-focused code review.
 // Claude Code, Codex and Pi run interactively, so the user can keep talking to
-// them in their tab; Kiro runs headless (no Otty integration) and is resumed
-// with `kiro-cli chat --no-interactive --resume`. Blocks until every agent is
+// them in their tab. Kiro runs headless (no Otty integration), once per model,
+// and is resumed with `kiro-cli chat --resume-id <session>`. Blocks until every agent is
 // done, then writes <out>/<name>.md per agent and <out>/summary.json.
 // Never answers an agent's question: one stuck on a question is reported.
 
@@ -16,6 +16,8 @@ import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
+import { fileURLToPath } from "node:url";
 
 const HOME = homedir();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -23,6 +25,44 @@ const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { encoding: "utf8"
 const otty = (...args) => run("otty", args);
 const ottyJson = (...args) => JSON.parse(otty(...args, "--json")).data;
 const ottyWait = (args) => new Promise((r) => spawn("otty", args, { stdio: "ignore" }).on("close", r));
+const SELF = fileURLToPath(import.meta.url);
+
+// --- Kiro stream mode ---------------------------------------------------------------
+// `kiro-cli ... --output-format stream-json 2>&1 | xreview.mjs --kiro-stream <out> <name>`:
+// show text and tool calls as they arrive, then save <name>.md and <name>.session.
+if (process.argv[2] === "--kiro-stream") {
+	const [dir, name] = process.argv.slice(3);
+	let afterTool = "";
+	let final = "";
+	let session = "";
+	let ok = false;
+	for await (const line of createInterface({ input: process.stdin })) {
+		let e;
+		try {
+			e = JSON.parse(line);
+		} catch {
+			if (!line.startsWith("[INFO]")) console.log(line);
+			continue;
+		}
+		const d = e.data ?? {};
+		const u = d.update ?? {};
+		session ||= d.sessionId ?? "";
+		if (u.sessionUpdate === "agent_message_chunk") {
+			afterTool += u.content?.text ?? "";
+			process.stdout.write(u.content?.text ?? "");
+		} else if (u.sessionUpdate === "tool_call") {
+			afterTool = ""; // text before a tool call is commentary, not the answer
+			console.log(`\n[tool] ${u.title ?? u.kind ?? ""} ${(u.locations ?? []).map((l) => l.path).join(" ")}`);
+		} else if (e.type === "runFinished") {
+			ok = d.status === "success";
+			final = (!d.finalTextTruncated && d.finalText) || afterTool;
+			if (!ok) console.log(`\n[kiro] ${d.status} ${d.stopReason ?? ""}`);
+		}
+	}
+	writeFileSync(join(dir, `${name}.md`), (final || afterTool).trim() + "\n");
+	writeFileSync(join(dir, `${name}.session`), session + "\n");
+	process.exit(ok ? 0 : 1);
+}
 
 // --- arguments -> task (+ optional diff) -----------------------------------------
 const USAGE =
@@ -90,15 +130,20 @@ label ||= "task";
 
 // --- reviewers -----------------------------------------------------------------
 const q = (s) => `'${s.replaceAll("'", `'\\''`)}'`;
+// Kiro has no Otty integration: run it headless, and let the stream mode below
+// print a readable log in its tab and save the reply and session id.
+const kiro = (name, model) => ({
+	name,
+	kind: "headless",
+	cmd:
+		`kiro-cli chat --no-interactive --trust-workspace --trust-tools=fs_read --model ${model} --output-format stream-json ` +
+		`"$(cat ${q(promptFile)})" 2>&1 | node ${q(SELF)} --kiro-stream ${q(out)} ${name}`,
+});
 const REVIEWERS = [
 	{ name: "claude", kind: "interactive", start: `claude --permission-mode plan --add-dir ${q(out)}` },
 	{ name: "codex", kind: "interactive", start: "codex -s read-only", ready: /Ask Codex/ },
-	{ name: "grok", kind: "interactive", start: "pi --model amazon-bedrock/global.xai.grok-4.7 --tools read,grep,find,ls" },
-	{
-		name: "kiro",
-		kind: "headless",
-		cmd: `kiro-cli chat --no-interactive --trust-workspace --trust-tools=fs_read "$(cat ${q(promptFile)})" 2>&1 | tee ${q(join(out, "kiro.md"))}`,
-	},
+	kiro("kiro-claude", "claude-opus-5.5"),
+	kiro("kiro-gpt", "gpt-5.6-sol"),
 ];
 
 const paneOf = (name) => {
@@ -157,7 +202,11 @@ const findFile = (dir, test) => {
 const text = (blocks) => (Array.isArray(blocks) ? blocks.filter((b) => b.type === "text").map((b) => b.text).join("") : "");
 
 function reply(r) {
-	if (r.kind === "headless") return existsSync(join(out, "kiro.md")) ? readFileSync(join(out, "kiro.md"), "utf8") : "";
+	if (r.kind === "headless") {
+		const f = join(out, `${r.name}.session`);
+		if (existsSync(f)) r.session = readFileSync(f, "utf8").trim() || undefined;
+		return existsSync(join(out, `${r.name}.md`)) ? readFileSync(join(out, `${r.name}.md`), "utf8").trim() : "";
+	}
 	if (!r.session) return "";
 	if (r.name === "claude") {
 		const f = findFile(join(HOME, ".claude", "projects"), (n) => n === `${r.session}.jsonl`);

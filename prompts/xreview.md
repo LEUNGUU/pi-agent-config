@@ -1,5 +1,5 @@
 ---
-description: Give one task to Claude Code, Codex, Kiro and Pi (Grok), one Otty tab each, then merge and check their answers
+description: Give one task to Claude Code, Codex and Kiro (Claude, GPT), one Otty tab each, then merge and check their answers
 argument-hint: "<task> [--uncommitted | --commit <sha> | --base <ref> | --range <a>..<b>]"
 ---
 Run this task across several coding agents: $@
@@ -26,6 +26,8 @@ Run this task across several coding agents: $@
 5. Give your own conclusion, with the agents' tab links for the points that
    came from them.
 6. End with next steps. The tabs stay open: the user can keep talking to
-   Claude, Codex and Grok there. For Kiro, run
-   `kiro-cli chat --no-interactive --resume --trust-tools=fs_read "<question>"`
-   in its tab. Close the tabs only when the user asks.
+   Claude and Codex there. Kiro runs headless; `summary.json` has each Kiro
+   session id. To continue one, run in its tab
+   `kiro-cli chat --resume-id <session>` (interactive), or
+   `kiro-cli chat --no-interactive --resume-id <session> --trust-tools=fs_read "<question>"`.
+   Close the tabs only when the user asks.
