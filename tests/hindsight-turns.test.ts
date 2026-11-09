@@ -30,3 +30,14 @@ test("adds the prompt when the run messages lack it, and drops custom messages",
 test("an aborted reply is not saved as the answer", () => {
 	expect(turnText([user("long task"), reply("Half of an ans", "aborted")], "long task")).toBe("User: long task");
 });
+
+test("an aborted run does not save in-between text as the answer", () => {
+	const messages = [user("fix it"), reply("Looking now.", "toolUse"), { role: "toolResult", content: "x" }, reply("half", "aborted")];
+	expect(turnText(messages, "fix it")).toBe("User: fix it");
+});
+
+test("a run aborted while a tool runs does not save its in-between text", () => {
+	const messages = [user("fix it"), reply("Looking now.", "toolUse")];
+	expect(turnText(messages, "fix it", true)).toBe("User: fix it");
+	expect(turnText(messages, "fix it")).toBe("User: fix it\n\nAssistant: Looking now.");
+});

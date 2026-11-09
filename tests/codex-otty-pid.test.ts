@@ -58,3 +58,10 @@ test("the shell prefix walks up to the outermost codex", () => {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
+
+test("a copy keeps the group's other fields, such as a matcher", () => {
+	const group = { ...otty("processing"), matcher: "Bash" };
+	const copy = JSON.parse(syncCodexHooks(file({ PreToolUse: [group] }))!).hooks.PreToolUse[1];
+	expect(copy.matcher).toBe("Bash");
+	expect(copy._otty).toBeUndefined();
+});

@@ -129,7 +129,7 @@ const textOf = (content: unknown): string =>
  * Failed and aborted attempts are skipped, so a retry keeps only the real answer.
  * Custom and tool messages are dropped.
  */
-export function turnText(messages: readonly unknown[], prompt: string): string {
+export function turnText(messages: readonly unknown[], prompt: string, aborted = false): string {
 	const lines: string[] = [];
 	let reply = "";
 	const flush = () => {
@@ -144,10 +144,15 @@ export function turnText(messages: readonly unknown[], prompt: string): string {
 		if (m.role === "user") {
 			flush();
 			if (t) lines.push(`User: ${t}`);
-		} else if (m.role === "assistant" && m.stopReason !== "error" && m.stopReason !== "aborted" && t) {
-			reply = t;
+		} else if (m.role === "assistant") {
+			// A failed or aborted reply cancels the in-between text before it
+			// ("Looking now."), which was never the answer.
+			if (m.stopReason === "error" || m.stopReason === "aborted") reply = "";
+			else if (t) reply = t;
 		}
 	}
+	// Aborted mid-tool: the last reply is in-between text, not an answer.
+	if (aborted) reply = "";
 	flush();
 	return lines.join("\n\n");
 }
@@ -241,8 +246,8 @@ export default function hindsightMcp(pi: ExtensionAPI) {
 		if (!blocked) runMessages.push(...((event as { messages?: unknown[] }).messages ?? []));
 	});
 
-	pi.on("agent_settled", async (_event, ctx) => {
-		const turn = blocked ? "" : turnText(runMessages, pendingPrompt);
+	pi.on("agent_settled", async (event, ctx) => {
+		const turn = blocked ? "" : turnText(runMessages, pendingPrompt, (event as { aborted?: boolean }).aborted === true);
 		pendingPrompt = "";
 		runMessages = [];
 		// Bind the UI now: ctx goes stale after /new or /reload, and the save settles later.

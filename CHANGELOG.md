@@ -13,17 +13,17 @@ First request: 19,539 -> 9,756 tokens.
 - `/xreview <task> [diff scope]` gives one task to Claude Code, Codex, and
   Kiro on Claude Opus 5.5 and on GPT-5.6 Sol, one Otty tab each, through
   `otty/xreview.mjs`. Every agent gets the same task read-only, plus the diff
-  when a scope is given (a scope alone means a bug-focused code review). The
-  main session merges the answers, shows where the agents disagree, and checks
-  each claim. All four run interactively, so the user can keep asking
-  questions in their tabs. Otty has no Kiro integration, so xreview installs a
-  global Kiro hook (`~/.kiro/hooks/otty-state.json`) that reports Kiro's state
-  to Otty; it does nothing unless Kiro was started with `OTTY_AGENT_PID` set.
-  Kiro runs as a read-only `xreview` agent (`~/.kiro/agents/xreview.json`)
-  that never asks for approval: reads and read-only `git`, `ls`, `cat`, `grep`
-  and similar commands are allowed, everything else is denied. An approval menu
-  that still appears is reported, never answered. Prompt cost
-  only when used.
+  when a scope is given (a scope alone means a bug-focused code review;
+  `--uncommitted` and `--base` include untracked files, minus secret-like or
+  large ones). The main session merges the answers, shows where the agents
+  disagree, and checks each claim. All four run interactively, so the user can
+  keep asking questions in their tabs, and none stops for approval: Claude runs
+  in `dontAsk` mode without edit or shell tools, Codex in its read-only
+  sandbox, and Kiro as a read-only `xreview` agent (`~/.kiro/agents/xreview.json`,
+  rewritten each run) with no shell or write tools and no access to home
+  dotfiles. Kiro runs in the run folder, so a reviewed repository's `.kiro/`
+  never loads; a hook there reports Kiro's state to Otty. Run files are
+  readable by the user only. Prompt cost only when used.
 
 - `extensions/codex-otty-pid.ts` keeps Codex sessions visible in Otty with
   toolbox Codex, whose process chain hides the agent from Otty's pane matching.

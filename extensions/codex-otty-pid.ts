@@ -13,7 +13,7 @@
 // Codex asks once to trust hooks whenever they change.
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -35,8 +35,12 @@ export function syncCodexHooks(text: string): string | undefined {
 		const kept = groups.filter((g) => !g[MARK]);
 		const copies = kept
 			.filter((g) => g._otty)
-			.flatMap((g) => (g.hooks ?? []).filter((h) => h.command?.includes(PPID_ARG)))
-			.map((h) => ({ [MARK]: true, hooks: [{ ...h, command: OUTER_PID + h.command!.replaceAll(PPID_ARG, '"$p"') }] }));
+			// Keep the group's other fields (a matcher, for example); swap only the marker.
+			.flatMap(({ _otty, hooks, ...group }) =>
+				(hooks ?? [])
+					.filter((h) => h.command?.includes(PPID_ARG))
+					.map((h) => ({ ...group, [MARK]: true, hooks: [{ ...h, command: OUTER_PID + h.command!.replaceAll(PPID_ARG, '"$p"') }] })),
+			);
 		file.hooks[event] = [...kept, ...copies];
 	}
 	const next = JSON.stringify(file, null, 2) + "\n";
@@ -49,7 +53,17 @@ export default function codexOttyPid(pi: ExtensionAPI) {
 		try {
 			const next = syncCodexHooks(readFileSync(HOOKS, "utf8"));
 			if (!next) return;
-			writeFileSync(HOOKS, next);
+			// Write a temp file and rename it: Codex never reads a half-written file.
+			// Through the real path and with the old mode: a symlinked hooks.json
+			// stays a symlink, and a private one stays private.
+			const target = realpathSync(HOOKS);
+			const tmp = `${target}.${process.pid}.tmp`;
+			try {
+				writeFileSync(tmp, next, { mode: statSync(target).mode & 0o777 });
+				renameSync(tmp, target);
+			} finally {
+				rmSync(tmp, { force: true });
+			}
 			const message = "Updated Codex hooks so Otty can see Codex sessions. Codex will ask you to trust the changed hooks once.";
 			if (ctx.hasUI) ctx.ui.notify(message, "info");
 			else console.error(message);
