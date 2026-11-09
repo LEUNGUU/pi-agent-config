@@ -9,7 +9,7 @@
 // All agents run interactively, so the user can keep talking to them in their
 // tab. Otty has no Kiro integration; ensureKiroHook() installs a global Kiro
 // hook that reports to Otty for Kiro started with OTTY_AGENT_PID set (see
-// kiro() below). Blocks until every agent is done, then writes <out>/<name>.md
+// kiro() below), and a read-only `xreview` Kiro agent that never asks. Blocks until every agent is done, then writes <out>/<name>.md
 // per agent and <out>/summary.json.
 // Never answers an agent's question: one stuck on a question is reported.
 
@@ -84,7 +84,6 @@ const prompt = [
 	`You are working in ${root}; read any file you need. Do not modify any file.`,
 	// Without a budget one reviewer spent 113 tool calls (22 min) on a 30 KB diff.
 	"Work efficiently: read only what the task needs, about 20 tool calls at most.",
-	"If a command would need the user's approval, skip it and read files instead.",
 ].join("\n");
 const promptFile = join(out, "prompt.txt");
 writeFileSync(promptFile, prompt + "\n");
@@ -98,7 +97,7 @@ const q = (s) => `'${s.replaceAll("'", `'\\''`)}'`;
 // keeps sh's pid, and the hook reports that pid.
 const kiro = (name, model) => ({
 	name,
-	start: `sh -c 'export OTTY_AGENT_PID=$$; exec kiro-cli chat --trust-workspace --trust-tools=fs_read --model ${model}'`,
+	start: `sh -c 'export OTTY_AGENT_PID=$$; exec kiro-cli chat --agent xreview --trust-workspace --model ${model}'`,
 	ready: /ask a question or describe a task/,
 	// Otty's prompt queue waits for an idle report, which Kiro only sends after a turn.
 	submit: "--submit=now",
@@ -110,6 +109,37 @@ const ottyState = (state) =>
 	`sid=$(sed -n 's/.*"session_id":"\\([^"]*\\)".*/\\1/p'); ` +
 	`"\${OTTY_CLI:-/Applications/Otty.app/Contents/MacOS/otty-cli}" state:kiro session-id="$sid" state=${state} ` +
 	`cwd="$PWD" agent-pid="$OTTY_AGENT_PID" label=Kiro >/dev/null 2>&1; exit 0`;
+// A read-only Kiro agent that never asks: reads and these read-only commands are
+// allowed; every other command, every write and every other capability is
+// denied (deny always wins).
+const GIT_READ = ["show", "log", "diff", "status", "blame", "grep", "rev-parse", "ls-files"];
+const READ_ONLY = [
+	...GIT_READ.flatMap((c) => [`git ${c}*`, `git -P ${c}*`, `git --no-pager ${c}*`]),
+	...["ls*", "cat *", "head *", "tail *", "wc *", "grep *", "rg *"],
+];
+const KIRO_AGENT = join(HOME, ".kiro", "agents", "xreview.json");
+const KIRO_AGENT_BODY = JSON.stringify({
+	name: "xreview",
+	description: "Read-only agent for xreview: reads files and runs read-only commands, never asks for approval.",
+	tools: ["read", "shell"],
+	permissions: {
+		rules: [
+			{ capability: "fs_read", effect: "allow" },
+			{ capability: "shell", match: READ_ONLY, effect: "allow" },
+			{ capability: "shell", match: ["*"], exclude: READ_ONLY, effect: "deny" },
+			// Everything else would ask (a skill load did): deny it so Kiro never stops.
+			...["fs_write", "skill", "power", "subagent", "web_fetch", "web_search", "mcp"].map((capability) => ({ capability, effect: "deny" })),
+		],
+	},
+}, null, 2) + "\n";
+
+/** Write a file only when its content differs. */
+function ensureFile(file, body) {
+	if (existsSync(file) && readFileSync(file, "utf8") === body) return;
+	mkdirSync(join(file, ".."), { recursive: true });
+	writeFileSync(file, body);
+}
+
 /** Write the global Kiro hook (silent: UserPromptSubmit stdout goes to the agent). */
 function ensureKiroHook() {
 	const hook = (name, trigger, state) => ({ name, trigger, action: { type: "command", command: ottyState(state) } });
@@ -120,9 +150,8 @@ function ensureKiroHook() {
 			hook("otty-state-stop", "Stop", "idle"),
 		],
 	}, null, 2) + "\n";
-	if (existsSync(KIRO_HOOK) && readFileSync(KIRO_HOOK, "utf8") === body) return;
-	mkdirSync(join(HOME, ".kiro", "hooks"), { recursive: true });
-	writeFileSync(KIRO_HOOK, body);
+	ensureFile(KIRO_HOOK, body);
+	ensureFile(KIRO_AGENT, KIRO_AGENT_BODY);
 }
 const REVIEWERS = [
 	{ name: "claude", start: `claude --permission-mode plan --add-dir ${q(out)}` },
@@ -135,7 +164,8 @@ const paneOf = (name) => {
 	const tab = ottyJson("tab", "new", "--cwd", root, "--title", `xreview: ${name}`, "--no-focus").id;
 	return ottyJson("pane", "list", "--tab", tab)[0].id;
 };
-const ASKING = /requires approval|❯ Allow once/;
+// Kiro's approval menu; an agent quoting one phrase of it must not match.
+const ASKING = /Allow once[^\n]*\n\s*Deny once/;
 const show = (pane) => ottyJson("pane", "show", "--pane", pane);
 const screen = (pane) => otty("pane", "capture", "--pane", pane, "--lines", "60");
 
@@ -157,15 +187,22 @@ async function review(r) {
 	// Don't wait on a pane that has not started the turn: an idle agent returns at once.
 	await until(() => show(pane).agent_state === "processing", 90000);
 	// Wait in rounds: `pane wait` keeps blocking on an agent that stopped on a question.
+	// Kiro's hooks can't report a question, so its approval menu is read off the
+	// screen. Otty's own screen heuristic can flag "awaiting" for a moment while
+	// an agent thinks, so a question counts only if it is still there 5 s later.
+	const asked = () => show(pane).agent_state === "awaiting" || ASKING.test(screen(pane));
 	let asking = false;
 	for (const end = Date.now() + 1800000; Date.now() < end; ) {
-		if ((await ottyWait(["pane", "wait", "--pane", pane, "--settle-ms", "3000", "--timeout-secs", "30"])) === 0) break;
-		// Kiro's hooks can't report a question, so look for its approval menu on screen.
-		if (show(pane).agent_state === "awaiting" || (asking = ASKING.test(screen(pane)))) break;
+		await ottyWait(["pane", "wait", "--pane", pane, "--settle-ms", "3000", "--timeout-secs", "30"]);
+		if (show(pane).agent_state === "idle") break;
+		if (asked() && (await sleep(5000), asked())) {
+			asking = true;
+			break;
+		}
 	}
 	const s = show(pane);
 	r.session = s.agent_session_id;
-	r.status = asking ? "needs your answer in its tab" : ({ awaiting: "needs your answer in its tab", idle: "ok" }[s.agent_state] ?? `still ${s.agent_state || "running"} after 30 min`);
+	r.status = asking ? "needs your answer in its tab" : s.agent_state === "idle" ? "ok" : `still ${s.agent_state || "running"} after 30 min`;
 }
 
 // --- read replies ----------------------------------------------------------------
@@ -202,7 +239,8 @@ function reply(r) {
 	const dir = existsSync(base) && readdirSync(base).map((w) => join(base, w, r.session)).find((d) => existsSync(d));
 	const es = dir ? jsonl(join(dir, "messages.jsonl")).map((e) => e.payload ?? {}) : [];
 	const last = es.findLastIndex((p) => p.type === "user");
-	const replies = es.slice(last + 1).filter((p) => p.type === "assistant" && typeof p.content === "string");
+	// Skip "Reasoning" entries: their content is a "..." placeholder.
+	const replies = es.slice(last + 1).filter((p) => p.type === "assistant" && p.operationType !== "Reasoning" && typeof p.content === "string");
 	return replies.at(-1)?.content.trim() ?? "";
 }
 

@@ -19,7 +19,10 @@ First request: 19,539 -> 9,756 tokens.
   questions in their tabs. Otty has no Kiro integration, so xreview installs a
   global Kiro hook (`~/.kiro/hooks/otty-state.json`) that reports Kiro's state
   to Otty; it does nothing unless Kiro was started with `OTTY_AGENT_PID` set.
-  A Kiro stopped on an approval menu is reported, never answered. Prompt cost
+  Kiro runs as a read-only `xreview` agent (`~/.kiro/agents/xreview.json`)
+  that never asks for approval: reads and read-only `git`, `ls`, `cat`, `grep`
+  and similar commands are allowed, everything else is denied. An approval menu
+  that still appears is reported, never answered. Prompt cost
   only when used.
 
 - `extensions/codex-otty-pid.ts` keeps Codex sessions visible in Otty with
