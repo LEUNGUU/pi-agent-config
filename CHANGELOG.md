@@ -15,9 +15,12 @@ First request: 19,539 -> 9,756 tokens.
   `otty/xreview.mjs`. Every agent gets the same task read-only, plus the diff
   when a scope is given (a scope alone means a bug-focused code review). The
   main session merges the answers, shows where the agents disagree, and checks
-  each claim. Claude and Codex stay open for follow-up questions; Kiro runs
-  headless and resumes with `--resume-id <session>` from `summary.json`.
-  Prompt cost only when used.
+  each claim. All four run interactively, so the user can keep asking
+  questions in their tabs. Otty has no Kiro integration, so xreview installs a
+  global Kiro hook (`~/.kiro/hooks/otty-state.json`) that reports Kiro's state
+  to Otty; it does nothing unless Kiro was started with `OTTY_AGENT_PID` set.
+  A Kiro stopped on an approval menu is reported, never answered. Prompt cost
+  only when used.
 
 - `extensions/codex-otty-pid.ts` keeps Codex sessions visible in Otty with
   toolbox Codex, whose process chain hides the agent from Otty's pane matching.
