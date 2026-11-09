@@ -13,8 +13,8 @@
 // Never answers an agent's question: one stuck on a question is reported.
 
 import { execFileSync, spawn } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 const HOME = homedir();
@@ -78,8 +78,14 @@ function gitDiff(root, scope) {
 	const opts = { maxBuffer: 64 << 20 };
 	if (Array.isArray(scope)) return run("git", ["-C", root, ...scope], opts);
 	const from = scope.mergeBase ? run("git", ["-C", root, "merge-base", "--end-of-options", scope.from, "HEAD"]) : scope.from;
-	const untracked = run("git", ["-C", root, "ls-files", "--others", "--exclude-standard", "-z"]).split("\0").filter(Boolean);
-	const skipped = untracked.filter((f) => SECRET_NAME.test(f) || statSync(join(root, f)).size > MAX_UNTRACKED);
+	// A trailing "/" is an untracked nested repository, which `git add -N` rejects.
+	// No .trim() here: a file name can start or end with a space.
+	const untracked = execFileSync("git", ["-C", root, "ls-files", "--others", "--exclude-standard", "-z"], { encoding: "utf8" })
+		.split("\0")
+		.filter((f) => f && !f.endsWith("/"));
+	// lstat: a broken symlink must not stop the run; a file gone since ls-files is skipped.
+	const size = (f) => { try { return lstatSync(join(root, f)).size; } catch { return Infinity; } };
+	const skipped = untracked.filter((f) => SECRET_NAME.test(f) || size(f) > MAX_UNTRACKED);
 	const added = untracked.filter((f) => !skipped.includes(f));
 	if (added.length) console.log(`xreview: untracked files included: ${added.join(", ")}`);
 	if (skipped.length) console.log(`xreview: untracked files left out (secret-like name or over 1 MB): ${skipped.join(", ")}`);
@@ -88,7 +94,8 @@ function gitDiff(root, scope) {
 	if (existsSync(real)) copyFileSync(real, index);
 	const env = { ...process.env, GIT_INDEX_FILE: index };
 	try {
-		if (added.length) run("git", ["-C", root, "add", "--intent-to-add", "--", ...added], { env });
+		// Paths on stdin: thousands of them would overflow the argument list.
+		if (added.length) run("git", ["-C", root, "add", "--intent-to-add", "--pathspec-from-file=-", "--pathspec-file-nul"], { env, input: added.join("\0") });
 		return run("git", ["-C", root, "diff", "--end-of-options", from], { ...opts, env });
 	} finally {
 		rmSync(index, { force: true });
@@ -102,10 +109,13 @@ try {
 	if (diffArgs) throw new Error("xreview: a diff scope needs a git repository");
 	root = process.cwd();
 }
-const out = join("/tmp/xreview", new Date().toISOString().replace(/[:.]/g, "-"));
-// Diffs and prompts may hold private code: keep them readable by this user only.
+// The per-user temp folder ($TMPDIR on macOS), not the shared /tmp: another user
+// could own /tmp/xreview and plant files, such as a Kiro hook, in a run folder.
+// Diffs and prompts may hold private code, so the folders are private too.
+const base = join(tmpdir(), "xreview");
+const out = join(base, new Date().toISOString().replace(/[:.]/g, "-"));
 mkdirSync(out, { recursive: true, mode: 0o700 });
-chmodSync("/tmp/xreview", 0o700);
+chmodSync(base, 0o700);
 
 const parts = [];
 if (diffArgs) {
@@ -193,10 +203,13 @@ function writeKiroWorkspace() {
 const REVIEWERS = [
 	// dontAsk: denies anything that needs approval, never shows a dialog (plan mode
 	// could end in an "approve this plan" dialog that hid the reply).
-	// --disallowedTools: dontAsk alone still runs anything a saved allow rule permits,
-	// including rules in the reviewed repository's .claude/settings.json.
-	{ name: "claude", start: `claude --permission-mode dontAsk --add-dir ${q(out)} --disallowedTools Edit Write NotebookEdit Bash` },
-	{ name: "codex", start: "codex -s read-only", ready: /Ask Codex/ },
+	// --tools: only these built-in tools, so no edit, shell, web or MCP tool can
+	// run whatever an allow rule says. --setting-sources user: the reviewed
+	// repository's .claude/ settings and hooks never load (Otty's hooks are user
+	// settings). --strict-mcp-config without --mcp-config: no MCP servers.
+	{ name: "claude", start: `claude --permission-mode dontAsk --setting-sources user --strict-mcp-config --tools Read Grep Glob --add-dir ${q(out)}` },
+	// -a never: a command the sandbox blocks fails back to the model instead of asking.
+	{ name: "codex", start: "codex -s read-only -a never", ready: /Ask Codex/ },
 	kiro("kiro-claude", "claude-opus-5.5"),
 	kiro("kiro-gpt", "gpt-5.6-sol"),
 ];

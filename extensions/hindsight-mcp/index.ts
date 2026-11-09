@@ -112,6 +112,7 @@ function retain(content: string, warn: (message: string) => void): void {
 }
 
 type Message = { role?: string; content?: unknown; stopReason?: string };
+const NOT_AN_ANSWER = new Set(["toolUse", "error", "aborted", "pending", "deferred"]);
 
 const textOf = (content: unknown): string =>
 	typeof content === "string"
@@ -125,11 +126,12 @@ const textOf = (content: unknown): string =>
 
 /**
  * One user run as "User:/Assistant:" lines: each user message (the prompt and any
- * follow-up queued during the run) paired with the last reply before the next one.
- * Failed and aborted attempts are skipped, so a retry keeps only the real answer.
- * Custom and tool messages are dropped.
+ * follow-up queued during the run) paired with the last finished reply before the
+ * next one. Only replies that end a turn count: text sent with a tool call is
+ * in-between commentary ("Looking now."), and failed or aborted replies are not
+ * answers, so a retry keeps only the real answer. Custom and tool messages are dropped.
  */
-export function turnText(messages: readonly unknown[], prompt: string, aborted = false): string {
+export function turnText(messages: readonly unknown[], prompt: string): string {
 	const lines: string[] = [];
 	let reply = "";
 	const flush = () => {
@@ -144,15 +146,10 @@ export function turnText(messages: readonly unknown[], prompt: string, aborted =
 		if (m.role === "user") {
 			flush();
 			if (t) lines.push(`User: ${t}`);
-		} else if (m.role === "assistant") {
-			// A failed or aborted reply cancels the in-between text before it
-			// ("Looking now."), which was never the answer.
-			if (m.stopReason === "error" || m.stopReason === "aborted") reply = "";
-			else if (t) reply = t;
+		} else if (m.role === "assistant" && t && !NOT_AN_ANSWER.has(m.stopReason ?? "")) {
+			reply = t;
 		}
 	}
-	// Aborted mid-tool: the last reply is in-between text, not an answer.
-	if (aborted) reply = "";
 	flush();
 	return lines.join("\n\n");
 }
@@ -246,8 +243,8 @@ export default function hindsightMcp(pi: ExtensionAPI) {
 		if (!blocked) runMessages.push(...((event as { messages?: unknown[] }).messages ?? []));
 	});
 
-	pi.on("agent_settled", async (event, ctx) => {
-		const turn = blocked ? "" : turnText(runMessages, pendingPrompt, (event as { aborted?: boolean }).aborted === true);
+	pi.on("agent_settled", async (_event, ctx) => {
+		const turn = blocked ? "" : turnText(runMessages, pendingPrompt);
 		pendingPrompt = "";
 		runMessages = [];
 		// Bind the UI now: ctx goes stale after /new or /reload, and the save settles later.

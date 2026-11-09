@@ -5,7 +5,7 @@ const user = (text: string) => ({ role: "user", content: [{ type: "text", text }
 const reply = (text: string, stopReason = "stop") => ({ role: "assistant", content: [{ type: "text", text }], stopReason });
 
 test("pairs the prompt with the final reply of the run", () => {
-	const messages = [user("fix the bug"), reply("Looking."), { role: "toolResult", content: "ok" }, reply("Fixed it.")];
+	const messages = [user("fix the bug"), reply("Looking.", "toolUse"), { role: "toolResult", content: "ok" }, reply("Fixed it.")];
 	expect(turnText(messages, "fix the bug")).toBe("User: fix the bug\n\nAssistant: Fixed it.");
 });
 
@@ -37,7 +37,10 @@ test("an aborted run does not save in-between text as the answer", () => {
 });
 
 test("a run aborted while a tool runs does not save its in-between text", () => {
-	const messages = [user("fix it"), reply("Looking now.", "toolUse")];
-	expect(turnText(messages, "fix it", true)).toBe("User: fix it");
-	expect(turnText(messages, "fix it")).toBe("User: fix it\n\nAssistant: Looking now.");
+	expect(turnText([user("fix it"), reply("Looking now.", "toolUse")], "fix it")).toBe("User: fix it");
+});
+
+test("a follow-up then an abort keeps no in-between text", () => {
+	const messages = [user("fix it"), reply("Looking now.", "toolUse"), user("also check tests"), reply("half", "aborted")];
+	expect(turnText(messages, "fix it")).toBe("User: fix it\n\nUser: also check tests");
 });

@@ -18,12 +18,13 @@ First request: 19,539 -> 9,756 tokens.
   large ones). The main session merges the answers, shows where the agents
   disagree, and checks each claim. All four run interactively, so the user can
   keep asking questions in their tabs, and none stops for approval: Claude runs
-  in `dontAsk` mode without edit or shell tools, Codex in its read-only
-  sandbox, and Kiro as a read-only `xreview` agent (`~/.kiro/agents/xreview.json`,
+  in `dontAsk` mode with only its read and search tools, user settings only (no
+  repository `.claude/` settings or hooks) and no MCP servers; Codex in its
+  read-only sandbox with `-a never`; and Kiro as a read-only `xreview` agent (`~/.kiro/agents/xreview.json`,
   rewritten each run) with no shell or write tools and no access to home
   dotfiles. Kiro runs in the run folder, so a reviewed repository's `.kiro/`
-  never loads; a hook there reports Kiro's state to Otty. Run files are
-  readable by the user only. Prompt cost only when used.
+  never loads; a hook there reports Kiro's state to Otty. Run files live in the
+  per-user temp folder and are readable by the user only. Prompt cost only when used.
 
 - `extensions/codex-otty-pid.ts` keeps Codex sessions visible in Otty with
   toolbox Codex, whose process chain hides the agent from Otty's pane matching.
